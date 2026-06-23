@@ -16,7 +16,7 @@ around three competition pillars:
 
 ```
 vibe_coding_milestone/
-├── package.json                   # Root scripts (test:mcp → Python runner)
+├── README.md                      # General project overview
 ├── test_mcp_servers.py            # MCP integration tests (Python stdio client)
 ├── mcp-climate-server/            # Climate & Geo MCP server (Python / FastMCP)
 │   ├── server.py
@@ -172,7 +172,7 @@ automatically as `stdio` subprocesses when needed.
 A Python `stdio` MCP client that validates both servers (protocol conformance + tools):
 
 ```bash
-npm run test:mcp        # equivalent to: backend/.venv/bin/python test_mcp_servers.py
+backend/.venv/bin/python test_mcp_servers.py
 ```
 
 Covers: `tools/list` on both servers, geocoding of Milan, 2025 monthly climate data, crop
