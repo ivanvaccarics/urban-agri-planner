@@ -5,7 +5,7 @@ This module wires together the three competition pillars:
 1. **Multi-Agent Systems** — a :class:`SequentialAgent` pipeline composed of a
    ``GeoClimateAgent`` (geolocation + climate analysis) and a ``PlannerAgent``
    (crop selection + companion planting), both ``LlmAgent`` instances powered by
-   Gemini 2.5 Flash.
+   Gemma (``gemma-4-26b-a4b-it``).
 2. **Model Context Protocol** — each agent reaches real tools through an
    :class:`McpToolset` connected over stdio to the Python FastMCP servers in
    ``mcp-climate-server`` and ``mcp-botanical-server``.
@@ -32,7 +32,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from mcp import StdioServerParameters
 
-MODEL = "gemini-2.5-flash"
+MODEL = "gemma-4-26b-a4b-it"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CLIMATE_SERVER_PATH = str(BASE_DIR / "mcp-climate-server" / "server.py")

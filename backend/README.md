@@ -8,7 +8,7 @@ security checkpoint**.
 
 | Pillar | Where it lives |
 | --- | --- |
-| **Multi-Agent Systems (Google ADK)** | [agents.py](agents.py) — a `SequentialAgent` (`CropPlanningPipeline`) chaining `GeoClimateAgent` → `PlannerAgent`, each an `LlmAgent` running `gemini-2.5-flash`. |
+| **Multi-Agent Systems (Google ADK)** | [agents.py](agents.py) — a `SequentialAgent` (`CropPlanningPipeline`) chaining `GeoClimateAgent` → `PlannerAgent`, each an `LlmAgent` running `gemma-4-26b-a4b-it`. |
 | **MCP servers** | [../mcp-climate-server/server.py](../mcp-climate-server/server.py) and [../mcp-botanical-server/server.py](../mcp-botanical-server/server.py) — FastMCP servers exposed to the agents via ADK's `McpToolset` over stdio. |
 | **Agent Security & Control** | The `finalize_plant_selection` tool is an ADK `FunctionTool` with `require_confirmation=True`. The run **pauses** at this checkpoint; the human approves, edits, or rejects the proposed crop list before any plan is generated. |
 

@@ -51,7 +51,7 @@ vibe_coding_milestone/
 
 The backend defines a `SequentialAgent` pipeline called **`CropPlanningPipeline`**
 (`backend/agents.py`) made of two specialised `LlmAgent` instances (model
-`gemini-2.5-flash`):
+`gemma-4-26b-a4b-it`):
 
 * **`GeoClimateAgent`** — uses the climate MCP toolset. It geocodes the address
   (`get_coordinates`), retrieves the historical microclimate (`get_climate_data`) and
@@ -140,7 +140,7 @@ latency a UI autocomplete needs. MCP stays where it belongs: powering the agent 
 ## Running the Application
 
 > Prerequisites: Python ≥ 3.10 and Node ≥ 18. A `GOOGLE_API_KEY` (Google AI Studio) is
-> required for live execution with Gemini; the tests do not need one.
+> required for live execution with the Gemma model; the tests do not need one.
 
 ### 1. Backend (Python environment)
 
@@ -181,7 +181,7 @@ analysis. **8/8 passing.**
 
 ### Backend HITL tests — `backend/test_backend.py`
 
-Uses a deterministic `ScriptedModel` in place of Gemini (no API key required), while
+Uses a deterministic `ScriptedModel` in place of the Gemma model (no API key required), while
 exercising the **real** MCP servers and the **real** ADK confirmation mechanism:
 
 ```bash
