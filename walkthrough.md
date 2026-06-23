@@ -37,9 +37,10 @@ vibe_coding_milestone/
 └── frontend/                      # Web dashboard (Vite + React)
     ├── package.json
     ├── index.html
+    ├── .env.example               # VITE_API_BASE (backend base URL)
     └── src/
         ├── main.jsx
-        ├── App.jsx                # Two-step flow with the approval checkpoint
+        ├── App.jsx                # Two-step flow, companion graph, calendar export
         └── index.css
 ```
 
@@ -72,16 +73,22 @@ agents connect to them as MCP clients via `McpToolset` + `StdioConnectionParams`
 
 **Climate server (`mcp-climate-server/server.py`)**
 * `get_coordinates(address)` → latitude/longitude via OpenStreetMap **Nominatim**.
-* `get_climate_data(latitude, longitude)` → 2025 daily archive from **Open-Meteo**; computes
-  a monthly profile (avg max/min, precipitation, absolute minimum) and estimates the
-  **USDA hardiness zone**.
+* `get_climate_data(latitude, longitude)` → a **rolling 10-year** daily archive from
+  **Open-Meteo** (the last 10 complete calendar years). It computes a monthly profile
+  (avg max/min, precipitation, absolute minimum), estimates the **USDA hardiness zone**
+  from the mean annual minimum using a proper band table (zones 1–13), and derives
+  **frost dates** (`lastSpringFrost`, `firstAutumnFrost`, `frostFreeDays`). The window
+  used is reported back in `climateYears`.
 
 **Botanical server (`mcp-botanical-server/server.py`)**
 * `get_compatible_plants(sunlightHours, exposure)` → crops compatible with the available
-  sunlight (a *North* exposure applies an extra shade filter).
+  sunlight (a *North* exposure applies an extra shade filter capped at
+  `NORTH_EXPOSURE_MAX_SUN_HOURS`).
 * `get_crop_details(plantId)` → full crop record.
 * `check_companion_planting(plantIds)` → beneficial/antagonistic companions and warnings
-  (e.g. mint is flagged as invasive).
+  (e.g. mint is flagged as invasive). The pairwise logic lives in a single
+  `compute_relationships(selected)` function that the backend imports too, so the MCP
+  tool and the final assembled plan can never disagree.
 
 ### Pillar 3 — Agent Security & Control (Human-in-the-Loop)
 
@@ -102,6 +109,37 @@ selection is recorded in the `security` block of the response.
 
 ---
 
+## Beyond the Pillars — Plan Quality, Security & Scalability
+
+The assembled plan and the API around it add several production-minded touches:
+
+* **Hemisphere-aware seasons** — the cultivation calendar and planting schedule flip the
+  season-to-month mapping for the **Southern Hemisphere**, driven by the geocoded latitude
+  (`resolve_season_months`).
+* **7-day watering advice** — `_fetch_watering_advice` calls the Open-Meteo **forecast** API
+  and turns upcoming rainfall/temperature into an actionable watering recommendation
+  (`wateringAdvice`), separate from the historical climate used for crop selection.
+* **Frost dates & climate window** — surfaced through to the UI so the user sees the basis
+  of the plan.
+* **Calendar export** — the frontend can download the 12-month calendar as an `.ics` file
+  or Print / Save as PDF.
+* **Companion-planting graph** — the companion/antagonist relationships render either as a
+  list or as an interactive SVG network graph.
+
+**Security & scalability hardening (backend):**
+
+* **Input validation** — `PlanRequest` validates `sunlightHours` (0–24) and constrains
+  `exposure`/`season` to known enums (Pydantic validators).
+* **CORS** — origins come from the `ALLOWED_ORIGINS` env var (defaults to the local Vite
+  origins); credentials are disabled, avoiding the invalid wildcard-plus-credentials combo.
+* **Autocomplete proxy** — `/api/address/suggestions` is cached (TTL + size cap) and
+  rate-limited to ≤ 1 req/s to honour Nominatim's usage policy.
+* **Bounded session store** — captured agent state lives in a `SessionStore` with TTL
+  expiry and an LRU-style size cap instead of an unbounded dict (swap for Redis to scale
+  horizontally).
+
+---
+
 ## API Contract (two steps)
 
 | Endpoint | Purpose | Returned status |
@@ -111,14 +149,16 @@ selection is recorded in the `security` block of the response.
 | `POST /api/plan` | Runs the pipeline up to the HITL checkpoint | `confirmation_required` (or `completed` if no crop matches) |
 | `POST /api/plan/confirm` | Resumes the session with the human decision | `completed` or `rejected` |
 
-**`POST /api/plan`** — body: `{ address, sunlightHours, exposure }`.
+**`POST /api/plan`** — body: `{ address, sunlightHours, exposure, season?, greenhouse? }`.
 `confirmation_required` response: `sessionId`, `functionCallId`, `proposedPlantIds`,
 `proposedPlants`, `rationale`, `compatiblePlants`, `location`, `coordinates`,
-`estimatedHardinessZone`, `absoluteMinTempYear`, `coordinatorComment`, `steps`, `checkpoint`.
+`estimatedHardinessZone`, `absoluteMinTempYear`, `frostDates`, `climateYears`,
+`coordinatorComment`, `steps`, `checkpoint`.
 
 **`POST /api/plan/confirm`** — body: `{ sessionId, functionCallId, approved, plantIds? }`.
-`completed` response: the full plan (`monthlyCalendar`, `companionship`, `selectedPlants`,
-`steps`) plus the `security` block (`humanApproved`, `adjusted`, `mechanism`,
+`completed` response: the full plan (`monthlyCalendar`, `plantingSchedule`, `companionship`,
+`selectedPlants`, `frostDates`, `climateYears`, `wateringAdvice`, `steps`) plus the
+`security` block (`humanApproved`, `adjusted`, `checkpointSkipped`, `mechanism`,
 `proposedPlantIds`, `finalPlantIds`).
 
 The frontend (`frontend/src/App.jsx`) implements exactly this flow: it generates the plan,
@@ -157,6 +197,7 @@ cp .env.example .env                # then add GOOGLE_API_KEY to .env
 ```bash
 cd frontend
 npm install
+cp .env.example .env                # optional: set VITE_API_BASE (defaults to :5001)
 npm run dev                         # http://localhost:5173
 ```
 
@@ -175,8 +216,8 @@ A Python `stdio` MCP client that validates both servers (protocol conformance + 
 backend/.venv/bin/python test_mcp_servers.py
 ```
 
-Covers: `tools/list` on both servers, geocoding of Milan, 2025 monthly climate data, crop
-filtering for 6h South and North shade, crop details, and tomato+basil+mint companion
+Covers: `tools/list` on both servers, geocoding of Milan, multi-year monthly climate data,
+crop filtering for 6h South and North shade, crop details, and tomato+basil+mint companion
 analysis. **8/8 passing.**
 
 ### Backend HITL tests — `backend/test_backend.py`
@@ -188,8 +229,8 @@ exercising the **real** MCP servers and the **real** ADK confirmation mechanism:
 cd backend && PYTHONPATH=$PWD .venv/bin/python test_backend.py
 ```
 
-Covers `health`, **approval**, **selection edit**, and **rejection** at the checkpoint.
-**4/4 passing.**
+Covers `health`, **approval**, **season + greenhouse**, **selection edit**, and **rejection**
+at the checkpoint. **5/5 passing.**
 
 ---
 

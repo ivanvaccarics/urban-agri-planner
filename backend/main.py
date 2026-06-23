@@ -11,9 +11,12 @@ human-in-the-loop planning API:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
+import time
+from collections import OrderedDict
 from typing import Any, Optional
 from uuid import uuid4
 from contextlib import asynccontextmanager
@@ -22,7 +25,7 @@ from dotenv import load_dotenv
 import httpx
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 # Load environment (GOOGLE_API_KEY, GOOGLE_GENAI_USE_VERTEXAI) before ADK uses it.
 load_dotenv()
@@ -49,13 +52,81 @@ APP_NAME = "urban-agri-planner"
 USER_ID = "local-user"
 CONFIRMATION_FC_NAME = "adk_request_confirmation"
 
+# Session capture store bounds (single-process; swap for Redis to scale out).
+SESSION_TTL_SECONDS = 60 * 30
+SESSION_MAX_ENTRIES = 200
+
+VALID_EXPOSURES = {
+    "South", "East", "West", "North",
+    "South-East", "South-West", "North-East", "North-West",
+}
+VALID_SEASONS = {"Spring", "Summer", "Autumn", "Winter"}
+
+
+class SessionStore:
+    """In-memory capture store with TTL expiry and an LRU-style size cap.
+
+    Bounds memory growth: entries older than the TTL are purged on access and
+    the least-recently-used entries are evicted once the cap is exceeded. This
+    is process-local — replace with a shared store (e.g. Redis) to run multiple
+    workers or scale horizontally.
+    """
+
+    def __init__(
+        self,
+        ttl_seconds: int = SESSION_TTL_SECONDS,
+        max_entries: int = SESSION_MAX_ENTRIES,
+    ) -> None:
+        self._ttl = ttl_seconds
+        self._max = max_entries
+        self._data: "OrderedDict[str, tuple[float, dict[str, Any]]]" = OrderedDict()
+
+    def _purge_expired(self) -> None:
+        cutoff = time.monotonic() - self._ttl
+        stale = [key for key, (ts, _) in self._data.items() if ts < cutoff]
+        for key in stale:
+            del self._data[key]
+
+    def set(self, key: str, value: dict[str, Any]) -> None:
+        self._purge_expired()
+        self._data[key] = (time.monotonic(), value)
+        self._data.move_to_end(key)
+        while len(self._data) > self._max:
+            self._data.popitem(last=False)
+
+    def get(self, key: str) -> Optional[dict[str, Any]]:
+        self._purge_expired()
+        item = self._data.get(key)
+        if item is None:
+            return None
+        # Refresh recency and TTL on access.
+        self._data[key] = (time.monotonic(), item[1])
+        self._data.move_to_end(key)
+        return item[1]
+
 
 class PlanRequest(BaseModel):
-    address: str
-    sunlightHours: float
+    address: str = Field(min_length=3, max_length=300)
+    sunlightHours: float = Field(ge=0, le=24)
     exposure: str
     season: Optional[str] = None
     greenhouse: bool = False
+
+    @field_validator("exposure")
+    @classmethod
+    def _validate_exposure(cls, value: str) -> str:
+        if value not in VALID_EXPOSURES:
+            raise ValueError(
+                f"exposure must be one of {sorted(VALID_EXPOSURES)}"
+            )
+        return value
+
+    @field_validator("season")
+    @classmethod
+    def _validate_season(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and value not in VALID_SEASONS:
+            raise ValueError(f"season must be one of {sorted(VALID_SEASONS)}")
+        return value
 
 
 class ConfirmRequest(BaseModel):
@@ -80,8 +151,8 @@ async def lifespan(app: FastAPI):
         app=adk_app,
         session_service=app.state.session_service,
     )
-    # Per-session capture store: session_id -> captured data.
-    app.state.sessions = {}
+    # Per-session capture store: session_id -> captured data, bounded by TTL/size.
+    app.state.sessions = SessionStore()
     if not os.getenv("GOOGLE_API_KEY"):
         logger.warning(
             "GOOGLE_API_KEY is not set. The agents will fail to call Gemini. "
@@ -94,12 +165,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Urban Agri-Planner Orchestrator", lifespan=lifespan)
 
+# CORS: restrict to known frontend origins. Override via the ALLOWED_ORIGINS
+# env var (comma-separated). A wildcard with credentials is invalid and unsafe,
+# so credentials stay disabled (the API is stateless and token-free).
+_DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -238,6 +319,8 @@ def _climate_summary(captured: dict[str, Any]) -> dict[str, Any]:
         "estimatedHardinessZone": clim.get("estimatedHardinessZone"),
         "absoluteMinTempYear": clim.get("absoluteMinTempYear"),
         "monthlyProfile": clim.get("monthlyProfile", []),
+        "frostDates": clim.get("frostDates"),
+        "climateYears": clim.get("climateYears"),
     }
 
 
@@ -291,24 +374,139 @@ async def health() -> dict[str, Any]:
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
 GEO_USER_AGENT = "UrbanAgriPlanner/1.0 (contact: support@urbanagriplanner.local)"
 
+# Short-term forecast (next 7 days) drives the watering advice in the final
+# plan. Unlike the historical climate used for crop selection, this is a live
+# REST call so the recommendation reflects upcoming rainfall.
+OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+async def _fetch_watering_advice(
+    latitude: Optional[float], longitude: Optional[float]
+) -> Optional[dict[str, Any]]:
+    """Derive watering guidance from the next 7 days of forecast precipitation.
+
+    Returns ``None`` when coordinates are missing or the forecast is
+    unavailable, so the plan degrades gracefully without it.
+    """
+    if latitude is None or longitude is None:
+        return None
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": "precipitation_sum,temperature_2m_max",
+        "forecast_days": 7,
+        "timezone": "auto",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(OPEN_METEO_FORECAST_URL, params=params)
+            response.raise_for_status()
+            data = response.json()
+    except Exception as exc:  # noqa: BLE001 - advice is best-effort
+        logger.warning("Watering advice fetch failed: %s", exc)
+        return None
+
+    daily = data.get("daily", {}) or {}
+    precip = [p for p in (daily.get("precipitation_sum") or []) if p is not None]
+    tmax = [t for t in (daily.get("temperature_2m_max") or []) if t is not None]
+    if not precip:
+        return None
+
+    total_precip = round(sum(precip), 1)
+    rainy_days = sum(1 for p in precip if p >= 1.0)
+    avg_max = round(sum(tmax) / len(tmax), 1) if tmax else None
+
+    if total_precip >= 15:
+        advice = "Skip watering for now — significant rain is expected over the next 7 days."
+        level = "low"
+    elif total_precip >= 5:
+        advice = (
+            "Light watering only — some rain is forecast this week. "
+            "Check soil moisture before watering."
+        )
+        level = "moderate"
+    else:
+        advice = "Water regularly — little to no rain is forecast over the next 7 days."
+        level = "high"
+
+    if avg_max is not None and avg_max >= 28:
+        advice += (
+            " High temperatures expected, so water early morning or evening "
+            "to reduce evaporation."
+        )
+
+    return {
+        "advice": advice,
+        "level": level,
+        "forecastDays": len(precip),
+        "totalPrecipitationMm": total_precip,
+        "rainyDays": rainy_days,
+        "avgMaxTempC": avg_max,
+    }
+
+
+# Cache + rate-limit for the proxy. Nominatim's usage policy asks for at most
+# one request per second and caching of results; we honour both so a burst of
+# keystrokes cannot hammer the upstream service or get us blocked.
+GEO_CACHE_TTL_SECONDS = 60 * 60
+GEO_CACHE_MAX_ENTRIES = 500
+NOMINATIM_MIN_INTERVAL = 1.0
+
+_geo_cache: "OrderedDict[str, tuple[float, list[dict[str, Any]]]]" = OrderedDict()
+_geo_rate_lock = asyncio.Lock()
+_geo_last_call_monotonic = 0.0
+
+
+def _geo_cache_get(key: str) -> Optional[list[dict[str, Any]]]:
+    item = _geo_cache.get(key)
+    if item is None:
+        return None
+    ts, value = item
+    if time.monotonic() - ts > GEO_CACHE_TTL_SECONDS:
+        del _geo_cache[key]
+        return None
+    _geo_cache.move_to_end(key)
+    return value
+
+
+def _geo_cache_set(key: str, value: list[dict[str, Any]]) -> None:
+    _geo_cache[key] = (time.monotonic(), value)
+    _geo_cache.move_to_end(key)
+    while len(_geo_cache) > GEO_CACHE_MAX_ENTRIES:
+        _geo_cache.popitem(last=False)
+
 
 @app.get("/api/address/suggestions")
 async def address_suggestions(q: str = "") -> dict[str, Any]:
     """Return up to 5 address suggestions for the given query string."""
+    global _geo_last_call_monotonic
     query = (q or "").strip()
     if len(query) < 3:
         return {"suggestions": []}
 
+    cache_key = query.lower()
+    cached = _geo_cache_get(cache_key)
+    if cached is not None:
+        return {"suggestions": cached}
+
     params = {"format": "json", "q": query, "limit": 5, "addressdetails": 0}
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(
-                NOMINATIM_SEARCH_URL,
-                params=params,
-                headers={"User-Agent": GEO_USER_AGENT},
+        # Serialise upstream calls and enforce the 1 req/s usage policy.
+        async with _geo_rate_lock:
+            wait = NOMINATIM_MIN_INTERVAL - (
+                time.monotonic() - _geo_last_call_monotonic
             )
-            response.raise_for_status()
-            data = response.json()
+            if wait > 0:
+                await asyncio.sleep(wait)
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(
+                    NOMINATIM_SEARCH_URL,
+                    params=params,
+                    headers={"User-Agent": GEO_USER_AGENT},
+                )
+                response.raise_for_status()
+                data = response.json()
+            _geo_last_call_monotonic = time.monotonic()
     except Exception as exc:  # noqa: BLE001 - autocomplete must degrade gracefully
         logger.warning("Address suggestions failed: %s", exc)
         return {"suggestions": []}
@@ -322,6 +520,7 @@ async def address_suggestions(q: str = "") -> dict[str, Any]:
         for item in data
         if item.get("display_name") and item.get("lat") and item.get("lon")
     ]
+    _geo_cache_set(cache_key, suggestions)
     return {"suggestions": suggestions}
 
 
@@ -333,7 +532,7 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
         app_name=APP_NAME, user_id=USER_ID, session_id=session_id
     )
     captured = _new_capture(request)
-    app.state.sessions[session_id] = captured
+    app.state.sessions.set(session_id, captured)
 
     message = types.Content(
         role="user",
@@ -362,7 +561,7 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
         # The pipeline finished without reaching the checkpoint (e.g. no plants
         # matched, or the model skipped finalization). Return a best-effort plan
         # so the UI never gets stuck.
-        return _assemble_completed(
+        return await _assemble_completed(
             session_id=session_id,
             captured=captured,
             selected_ids=[p["id"] for p in compatible[:4]],
@@ -389,6 +588,8 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
         "coordinates": climate["coordinates"],
         "estimatedHardinessZone": climate["estimatedHardinessZone"],
         "absoluteMinTempYear": climate["absoluteMinTempYear"],
+        "frostDates": climate["frostDates"],
+        "climateYears": climate["climateYears"],
         "coordinatorComment": coordinator_comment,
         "season": request.season,
         "greenhouse": request.greenhouse,
@@ -460,7 +661,7 @@ async def confirm_plan(request: ConfirmRequest) -> dict[str, Any]:
             "proposedPlantIds", []
         )
 
-    return _assemble_completed(
+    return await _assemble_completed(
         session_id=request.sessionId,
         captured=captured,
         selected_ids=final_ids,
@@ -471,7 +672,7 @@ async def confirm_plan(request: ConfirmRequest) -> dict[str, Any]:
     )
 
 
-def _assemble_completed(
+async def _assemble_completed(
     *,
     session_id: str,
     captured: dict[str, Any],
@@ -489,21 +690,30 @@ def _assemble_completed(
     request_data = captured.get("request", {}) or {}
     season = request_data.get("season")
     greenhouse = bool(request_data.get("greenhouse"))
+    latitude = (climate.get("coordinates") or {}).get("latitude")
 
     monthly_profile = climate["monthlyProfile"]
     if selected and monthly_profile:
         monthly_calendar = generate_calendar(
-            selected, monthly_profile, season=season, greenhouse=greenhouse
+            selected,
+            monthly_profile,
+            season=season,
+            greenhouse=greenhouse,
+            latitude=latitude,
         )
     else:
         monthly_calendar = empty_calendar()
 
     planting_schedule = build_planting_schedule(
-        selected, season=season, greenhouse=greenhouse
+        selected, season=season, greenhouse=greenhouse, latitude=latitude
     )
     companionship = compute_companionship(selected)
     proposed_ids = (captured.get("confirmation") or {}).get("proposedPlantIds", [])
     final_ids = [p["id"] for p in selected]
+    coordinates = climate.get("coordinates") or {}
+    watering_advice = await _fetch_watering_advice(
+        coordinates.get("latitude"), coordinates.get("longitude")
+    )
 
     return {
         "status": "completed",
@@ -512,6 +722,9 @@ def _assemble_completed(
         "coordinates": climate["coordinates"],
         "estimatedHardinessZone": climate["estimatedHardinessZone"],
         "absoluteMinTempYear": climate["absoluteMinTempYear"],
+        "frostDates": climate["frostDates"],
+        "climateYears": climate["climateYears"],
+        "wateringAdvice": watering_advice,
         "steps": captured["steps"],
         "compatiblePlants": compatible,
         "selectedPlants": selected,

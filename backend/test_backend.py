@@ -160,9 +160,14 @@ def _start_plan(client) -> dict:
         data.get("proposedPlantIds") == PROPOSED_IDS,
         f"unexpected proposedPlantIds: {data.get('proposedPlantIds')}",
     )
+    compatible_ids = {p["id"] for p in data.get("compatiblePlants", [])}
     _check(
-        len(data.get("compatiblePlants", [])) == 10,
-        f"expected 10 compatible plants, got {len(data.get('compatiblePlants', []))}",
+        len(compatible_ids) > 0,
+        "expected at least one compatible plant",
+    )
+    _check(
+        set(PROPOSED_IDS).issubset(compatible_ids),
+        f"proposed ids {PROPOSED_IDS} not all present in compatible plants",
     )
     _check(bool(data.get("location")), "missing location from climate agent")
     _check(

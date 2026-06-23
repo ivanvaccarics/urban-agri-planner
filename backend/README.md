@@ -27,6 +27,42 @@ security checkpoint**.
 Resumption relies on ADK's `ResumabilityConfig(is_resumable=True)` so the
 `SequentialAgent` resumes the paused sub-agent instead of restarting.
 
+## What the final plan includes
+
+On approval the backend deterministically assembles:
+
+- a **12-month cultivation calendar** and **planting schedule**, with seasons
+  automatically flipped for the **Southern Hemisphere** (driven by the geocoded
+  latitude);
+- **companion-planting relationships**, computed via the botanical server's
+  shared `compute_relationships` function (single source of truth);
+- **frost dates** and the **climate window** surfaced from the climate server;
+- **watering advice** derived from a live 7-day Open-Meteo forecast
+  (`_fetch_watering_advice`), so the recommendation reflects upcoming rainfall;
+- a `security` block recording the human-approval outcome (approved / adjusted /
+  checkpoint-skipped).
+
+## Security & scalability
+
+- **Input validation** — `PlanRequest` validates `sunlightHours` (0–24) and
+  constrains `exposure`/`season` to known enums (Pydantic validators).
+- **CORS** — origins are read from the `ALLOWED_ORIGINS` env var (comma-separated;
+  defaults to the local Vite dev origins). Credentials are disabled, avoiding the
+  invalid wildcard-plus-credentials combination.
+- **Address autocomplete proxy** — `/api/address/suggestions` is cached (TTL +
+  size cap) and rate-limited to ≤ 1 request/second to honour Nominatim's usage
+  policy.
+- **Session store** — captured agent state is held in a bounded `SessionStore`
+  with TTL expiry and an LRU-style size cap instead of an unbounded dict. Swap it
+  for a shared store (e.g. Redis) to run multiple workers.
+
+## Configuration
+
+| Env var | Default | Purpose |
+| --- | --- | --- |
+| `GOOGLE_API_KEY` | — | Gemini/Gemma model access (required for live runs). |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated CORS allow-list. |
+
 ## Setup
 
 ```bash

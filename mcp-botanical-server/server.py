@@ -20,6 +20,10 @@ from mcp.server.fastmcp import FastMCP
 DB_PATH = Path(__file__).resolve().parent / "db.json"
 PLANTS: list[dict[str, Any]] = json.loads(DB_PATH.read_text(encoding="utf-8"))
 
+# A North-facing balcony never gets direct midday sun, so only genuinely
+# shade-tolerant crops (those needing at most this many hours) are viable there.
+NORTH_EXPOSURE_MAX_SUN_HOURS = 4
+
 mcp = FastMCP("mcp-botanical-server")
 
 
@@ -28,7 +32,8 @@ def get_compatible_plants(sunlightHours: float, exposure: str) -> dict[str, Any]
     """List plants compatible with the available sunlight and orientation.
 
     Filters by each plant's minimum sunlight requirement. For a North-facing
-    exposure only shade-tolerant plants (``sunlightHoursMin <= 4``) are kept.
+    exposure only shade-tolerant plants (``sunlightHoursMin <=
+    NORTH_EXPOSURE_MAX_SUN_HOURS``) are kept.
 
     Args:
         sunlightHours: Hours of direct sunlight available per day.
@@ -42,7 +47,7 @@ def get_compatible_plants(sunlightHours: float, exposure: str) -> dict[str, Any]
     for plant in PLANTS:
         if sunlightHours < plant["sunlightHoursMin"]:
             continue
-        if is_north and plant["sunlightHoursMin"] > 4:
+        if is_north and plant["sunlightHoursMin"] > NORTH_EXPOSURE_MAX_SUN_HOURS:
             continue
         filtered.append(plant)
 
@@ -79,7 +84,23 @@ def check_companion_planting(plantIds: list[str]) -> dict[str, Any]:
         Dict with ``companions``, ``antagonists`` and ``warnings`` lists.
     """
     selected = [p for p in PLANTS if p["id"] in plantIds]
+    return compute_relationships(selected)
 
+
+def compute_relationships(selected: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive companion-planting relationships for a set of full plant records.
+
+    This is the single source of truth for companion/antagonist/warning logic,
+    shared by the ``check_companion_planting`` MCP tool and the backend
+    orchestrator (which imports it to keep the final plan consistent with the
+    human-approved selection).
+
+    Args:
+        selected: Full plant records to analyze together.
+
+    Returns:
+        Dict with ``companions``, ``antagonists`` and ``warnings`` lists.
+    """
     companions: list[dict[str, Any]] = []
     antagonists: list[dict[str, Any]] = []
     warnings: list[str] = []

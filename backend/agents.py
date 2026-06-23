@@ -20,6 +20,7 @@ not subject to model variance.
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CLIMATE_SERVER_PATH = str(BASE_DIR / "mcp-climate-server" / "server.py")
 BOTANICAL_SERVER_PATH = str(BASE_DIR / "mcp-botanical-server" / "server.py")
 
+
+def _load_botanical_module():
+    """Import the botanical MCP server module to reuse its companion logic.
+
+    Loading the module only constructs the ``FastMCP`` object; ``mcp.run`` is
+    guarded by ``__main__`` so no server starts. This lets the orchestrator share
+    the server's companion-relationship rules as a single source of truth.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "mcp_botanical_server", BOTANICAL_SERVER_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_botanical = _load_botanical_module()
+_compute_relationships = _botanical.compute_relationships
+
 MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
@@ -50,13 +70,36 @@ MONTH_ABBR = [
 
 # Season -> month numbers (Northern Hemisphere). Used to flag in-season months
 # in the calendar and to highlight crops whose sowing window falls in the
-# user's target season.
+# user's target season. For Southern-Hemisphere locations the months are
+# shifted by six (see :func:`resolve_season_months`).
 SEASON_MONTHS = {
     "Spring": [3, 4, 5],
     "Summer": [6, 7, 8],
     "Autumn": [9, 10, 11],
     "Winter": [12, 1, 2],
 }
+
+
+def resolve_season_months(
+    season: str | None, latitude: float | None = None
+) -> list[int]:
+    """Return the month numbers for a season, flipping for the hemisphere.
+
+    The :data:`SEASON_MONTHS` table is Northern-Hemisphere. When ``latitude`` is
+    negative (Southern Hemisphere) each month is shifted by six so, e.g.,
+    "Spring" maps to Sep-Nov instead of Mar-May.
+
+    Args:
+        season: Target season name (Spring/Summer/Autumn/Winter), or ``None``.
+        latitude: Latitude of the location; negative means Southern Hemisphere.
+
+    Returns:
+        The list of month numbers for the season in the correct hemisphere.
+    """
+    months = SEASON_MONTHS.get(season or "", [])
+    if latitude is not None and latitude < 0 and months:
+        return [((m + 5) % 12) + 1 for m in months]
+    return list(months)
 
 # Degrees Celsius of night-time cold protection a greenhouse provides. Relaxes
 # the cold thresholds in the calendar so a greenhouse setup extends the season.
@@ -241,6 +284,7 @@ def generate_calendar(
     monthly_profile: list[dict[str, Any]],
     season: str | None = None,
     greenhouse: bool = False,
+    latitude: float | None = None,
 ) -> list[dict[str, Any]]:
     """Generate the personalised 12-month cultivation calendar.
 
@@ -252,12 +296,15 @@ def generate_calendar(
     Args:
         selected_plants: Full plant records that the user approved.
         monthly_profile: 12 monthly climate entries from ``get_climate_data``.
+        season: Target growing season (Spring/Summer/Autumn/Winter).
+        greenhouse: Whether the crops are grown under greenhouse cover.
+        latitude: Location latitude; negative flips seasons to the South.
 
     Returns:
         A list of 12 month entries, each with temperature context and actions.
     """
     monthly_calendar: list[dict[str, Any]] = []
-    season_months = set(SEASON_MONTHS.get(season or "", []))
+    season_months = set(resolve_season_months(season, latitude))
     temp_buffer = GREENHOUSE_TEMP_BUFFER if greenhouse else 0
 
     for month_index, month_data in enumerate(monthly_profile):
@@ -449,6 +496,7 @@ def build_planting_schedule(
     selected_plants: list[dict[str, Any]],
     season: str | None = None,
     greenhouse: bool = False,
+    latitude: float | None = None,
 ) -> list[dict[str, Any]]:
     """Summarise, per crop, when to put it in the field and when to harvest.
 
@@ -459,11 +507,12 @@ def build_planting_schedule(
         selected_plants: Full plant records that the user approved.
         season: Target growing season (Spring/Summer/Autumn/Winter).
         greenhouse: Whether the crops are grown under greenhouse cover.
+        latitude: Location latitude; negative flips seasons to the South.
 
     Returns:
         One entry per plant with readable field-planting and harvest windows.
     """
-    season_months = set(SEASON_MONTHS.get(season or "", []))
+    season_months = set(resolve_season_months(season, latitude))
     schedule: list[dict[str, Any]] = []
 
     for plant in selected_plants:
@@ -494,10 +543,10 @@ def build_planting_schedule(
 def compute_companionship(selected_plants: list[dict[str, Any]]) -> dict[str, Any]:
     """Deterministically derive companion-planting relationships for a set.
 
-    Mirrors the botanical MCP tool, but operates on the full plant records the
-    orchestrator already holds. Used when assembling the final plan so the result
-    stays consistent with the human-approved selection (which may differ from the
-    set the agent originally analysed).
+    Delegates to :func:`compute_relationships` in the botanical MCP server so the
+    backend and the MCP tool share one implementation. Used when assembling the
+    final plan so the result stays consistent with the human-approved selection
+    (which may differ from the set the agent originally analysed).
 
     Args:
         selected_plants: Full plant records that were approved.
@@ -505,31 +554,4 @@ def compute_companionship(selected_plants: list[dict[str, Any]]) -> dict[str, An
     Returns:
         Dict with ``companions``, ``antagonists`` and ``warnings`` lists.
     """
-    companions: list[dict[str, Any]] = []
-    antagonists: list[dict[str, Any]] = []
-    warnings: list[str] = []
-
-    for i, p1 in enumerate(selected_plants):
-        if p1["id"] == "mint":
-            warnings.append(
-                "Mint is highly invasive. We strongly recommend growing it "
-                "in a separate pot, away from any other crop."
-            )
-        for j in range(i + 1, len(selected_plants)):
-            p2 = selected_plants[j]
-            if p2["name"] in p1["companions"] or p1["name"] in p2["companions"]:
-                companions.append(
-                    {
-                        "plants": [p1["name"], p2["name"]],
-                        "reason": "Great combination! Grown side by side they support each other.",
-                    }
-                )
-            if p2["name"] in p1["antagonists"] or p1["name"] in p2["antagonists"]:
-                antagonists.append(
-                    {
-                        "plants": [p1["name"], p2["name"]],
-                        "reason": "Not recommended together. They can compete for resources or attract similar pests.",
-                    }
-                )
-
-    return {"companions": companions, "antagonists": antagonists, "warnings": warnings}
+    return _compute_relationships(selected_plants)

@@ -898,6 +898,157 @@ select.input-field {
   .security-banner    { flex-wrap: wrap; }
 }
 
+/* ================================================================
+   Frost dates, Watering advice, Calendar export & Companion graph
+   ================================================================ */
+
+.frost-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.frost-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-inset);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+
+.frost-icon { color: #3a86b5; font-size: 22px; }
+.frost-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.frost-value { font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
+
+.watering-advice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(58, 134, 181, 0.07);
+}
+
+.watering-advice.high   { border-left: 4px solid #c0392b; background: rgba(192, 57, 43, 0.06); }
+.watering-advice.moderate { border-left: 4px solid var(--harvest); background: rgba(181, 115, 26, 0.06); }
+.watering-advice.low    { border-left: 4px solid var(--canopy); background: rgba(79, 140, 68, 0.06); }
+
+.watering-advice .watering-icon { color: #3a86b5; font-size: 24px; margin-top: 2px; }
+.watering-advice strong { display: block; font-size: 0.9rem; margin-bottom: 3px; }
+.watering-advice p { font-size: 0.85rem; color: var(--text-main); margin: 0 0 5px; }
+.watering-meta { font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* Calendar export controls */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+
+.calendar-export { display: flex; gap: 8px; }
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-family: var(--font-header);
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-export:hover { border-color: var(--border-color-hover); background: rgba(79, 140, 68, 0.10); }
+.btn-export .material-symbols { font-size: 17px; }
+
+/* Companion list/graph toggle */
+.companion-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin: 4px 0 16px;
+  background: var(--bg-inset);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.companion-toggle .seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-header);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.companion-toggle .seg.active { background: var(--bg-surface-solid); color: var(--canopy); box-shadow: var(--card-shadow); }
+.companion-toggle .seg .material-symbols { font-size: 17px; }
+
+/* Companion graph */
+.companion-graph { display: flex; flex-direction: column; align-items: center; }
+.companion-graph-svg { width: 100%; max-width: 380px; height: auto; }
+
+.graph-edge { stroke-width: 2.5; opacity: 0.7; }
+.graph-edge.good { stroke: var(--canopy); }
+.graph-edge.bad  { stroke: var(--danger); stroke-dasharray: 6 5; }
+
+.graph-node {
+  fill: var(--bg-surface-solid);
+  stroke: var(--canopy);
+  stroke-width: 2.5;
+}
+
+.graph-node-label {
+  font-family: var(--font-header);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--text-main);
+}
+
+.graph-legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-swatch { width: 16px; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+.legend-swatch.good { border-top-color: var(--canopy); }
+.legend-swatch.bad  { border-top-color: var(--danger); border-top-style: dashed; }
+
+@media print {
+  header, section.glass-card:first-of-type, .activity-card,
+  .security-banner .btn-reset, .calendar-export, .companion-toggle {
+    display: none !important;
+  }
+  .app-container { max-width: 100%; }
+  .glass-card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+}
+
 /* ── Segmented toggle (Outdoor / Greenhouse) ─────── */
 .segmented {
   display: flex;

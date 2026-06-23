@@ -1,6 +1,138 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const API_BASE = "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5001";
+
+const MONTH_TO_NUM = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+// Build a downloadable .ics calendar from the monthly cultivation plan.
+// Each month's actions become an all-day event on the 1st of that month,
+// so the user can import the full growing cycle into any calendar app.
+function buildICS(planResult) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const year = new Date().getFullYear();
+  const dtstamp =
+    new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const esc = (s) =>
+    String(s || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,")
+      .replace(/\n/g, "\\n");
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Urban Agri-Planner//Cultivation Calendar//EN",
+    "CALSCALE:GREGORIAN",
+  ];
+
+  (planResult.monthlyCalendar || []).forEach((monthData) => {
+    const key = String(monthData.month || "").slice(0, 3).toLowerCase();
+    const monthNum = MONTH_TO_NUM[key];
+    if (!monthNum || !monthData.actions || monthData.actions.length === 0) return;
+    const start = `${year}${pad(monthNum)}01`;
+    const endDate = new Date(year, monthNum, 2); // 1st of next month for DTEND
+    const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(
+      endDate.getDate()
+    )}`;
+    monthData.actions.forEach((act, i) => {
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${monthNum}-${i}-${act.plant || "plant"}@urbanagriplanner`,
+        `DTSTAMP:${dtstamp}`,
+        `DTSTART;VALUE=DATE:${start}`,
+        `DTEND;VALUE=DATE:${end}`,
+        `SUMMARY:${esc(`${act.type}: ${act.plant}`)}`,
+        `DESCRIPTION:${esc(act.text)}`,
+        "END:VEVENT"
+      );
+    });
+  });
+
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function downloadICS(planResult) {
+  const ics = buildICS(planResult);
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const place = (planResult.location || "plan").split(",")[0].trim().replace(/\s+/g, "-");
+  link.href = url;
+  link.download = `agri-calendar-${place || "plan"}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Lightweight dependency-free network graph of companion / antagonist links.
+// Plants are placed on a circle; green edges = good companions, red = antagonists.
+function CompanionGraph({ selectedPlants, companionship }) {
+  const plants = selectedPlants || [];
+  const size = 360;
+  const center = size / 2;
+  const radius = plants.length > 1 ? size / 2 - 70 : 0;
+
+  if (plants.length === 0) {
+    return (
+      <p className="no-actions text-center">No crops selected to graph.</p>
+    );
+  }
+
+  const positions = {};
+  plants.forEach((p, i) => {
+    const angle = (2 * Math.PI * i) / plants.length - Math.PI / 2;
+    positions[p.name] = {
+      x: center + radius * Math.cos(angle),
+      y: center + radius * Math.sin(angle),
+    };
+  });
+
+  const edge = (pair, type, idx) => {
+    const a = positions[pair[0]];
+    const b = positions[pair[1]];
+    if (!a || !b) return null;
+    return (
+      <line
+        key={`${type}-${idx}`}
+        x1={a.x}
+        y1={a.y}
+        x2={b.x}
+        y2={b.y}
+        className={`graph-edge ${type}`}
+      />
+    );
+  };
+
+  return (
+    <div className="companion-graph">
+      <svg viewBox={`0 0 ${size} ${size}`} className="companion-graph-svg" role="img" aria-label="Companion planting graph">
+        {(companionship.companions || []).map((c, i) => edge(c.plants, "good", i))}
+        {(companionship.antagonists || []).map((a, i) => edge(a.plants, "bad", i))}
+        {plants.map((p) => {
+          const pos = positions[p.name];
+          return (
+            <g key={p.id} className="graph-node-group">
+              <circle cx={pos.x} cy={pos.y} r={26} className="graph-node" />
+              <text x={pos.x} y={pos.y + 42} className="graph-node-label" textAnchor="middle">
+                {p.name}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="graph-legend">
+        <span className="legend-item"><span className="legend-swatch good" /> Good companions</span>
+        <span className="legend-item"><span className="legend-swatch bad" /> Avoid together</span>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [address, setAddress] = useState("Via Roma 10, Milan, Italy");
@@ -23,6 +155,7 @@ function App() {
   const [checkpointSelection, setCheckpointSelection] = useState([]);   // plant ids the human keeps at the gate
   const [planResult, setPlanResult] = useState(null);                   // completed plan
   const [rejection, setRejection] = useState(null);                     // rejected payload
+  const [companionView, setCompanionView] = useState("list");           // "list" | "graph"
 
   // Animate the real agent steps into the activity log for an agentic feel.
   const animateSteps = async (steps) => {
@@ -558,6 +691,57 @@ function App() {
               <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                 <strong>Detected location:</strong> {planResult.location}
               </p>
+              {planResult.climateYears && (
+                <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Based on {planResult.climateYears.count}-year climate average
+                  ({planResult.climateYears.start}–{planResult.climateYears.end}).
+                </p>
+              )}
+
+              {planResult.frostDates && (
+                <div className="frost-row">
+                  <div className="frost-box">
+                    <span className="material-symbols frost-icon">ac_unit</span>
+                    <div>
+                      <div className="frost-label">Last spring frost</div>
+                      <div className="frost-value">{planResult.frostDates.lastSpringFrost || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="frost-box">
+                    <span className="material-symbols frost-icon">ac_unit</span>
+                    <div>
+                      <div className="frost-label">First autumn frost</div>
+                      <div className="frost-value">{planResult.frostDates.firstAutumnFrost || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="frost-box">
+                    <span className="material-symbols frost-icon" style={{ color: "#4a8c3d" }}>calendar_today</span>
+                    <div>
+                      <div className="frost-label">Frost-free days</div>
+                      <div className="frost-value">
+                        {planResult.frostDates.frostFreeDays != null ? `${planResult.frostDates.frostFreeDays}` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {planResult.wateringAdvice && (
+                <div className={`watering-advice ${planResult.wateringAdvice.level}`}>
+                  <span className="material-symbols watering-icon">water_drop</span>
+                  <div>
+                    <strong>Watering advice (next 7 days)</strong>
+                    <p>{planResult.wateringAdvice.advice}</p>
+                    <span className="watering-meta">
+                      {planResult.wateringAdvice.totalPrecipitationMm} mm forecast ·
+                      {" "}{planResult.wateringAdvice.rainyDays} rainy day(s)
+                      {planResult.wateringAdvice.avgMaxTempC != null
+                        ? ` · avg max ${planResult.wateringAdvice.avgMaxTempC}°C`
+                        : ""}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Compatible crop selection */}
@@ -633,7 +817,30 @@ function App() {
                 <span className="material-symbols">groups</span> Companion Planting & Alerts
               </h2>
               <p className="narrative-comment">{planResult.plannerComment}</p>
-              
+
+              <div className="companion-toggle" role="group" aria-label="Companion view">
+                <button
+                  type="button"
+                  className={`seg ${companionView === "list" ? "active" : ""}`}
+                  onClick={() => setCompanionView("list")}
+                >
+                  <span className="material-symbols">list</span> <span className="seg-label">List</span>
+                </button>
+                <button
+                  type="button"
+                  className={`seg ${companionView === "graph" ? "active" : ""}`}
+                  onClick={() => setCompanionView("graph")}
+                >
+                  <span className="material-symbols">hub</span> <span className="seg-label">Graph</span>
+                </button>
+              </div>
+
+              {companionView === "graph" ? (
+                <CompanionGraph
+                  selectedPlants={planResult.selectedPlants}
+                  companionship={planResult.companionship}
+                />
+              ) : (
               <div className="companion-section">
                 {/* Companions */}
                 {planResult.companionship.companions.map((c, idx) => (
@@ -674,14 +881,35 @@ function App() {
                    <p className="no-actions text-center">No special companion relationships active for the selected plants.</p>
                 )}
               </div>
+              )}
             </div>
           </div>
 
           {/* Right Column: Monthly Calendar Timeline */}
           <div className="glass-card">
-            <h2 className="card-title">
-              <span className="material-symbols">calendar_month</span> Optimised Cultivation Calendar
-            </h2>
+            <div className="calendar-header">
+              <h2 className="card-title" style={{ marginBottom: 0, border: "none" }}>
+                <span className="material-symbols">calendar_month</span> Optimised Cultivation Calendar
+              </h2>
+              <div className="calendar-export">
+                <button
+                  type="button"
+                  className="btn-export"
+                  onClick={() => downloadICS(planResult)}
+                  title="Download as .ics calendar"
+                >
+                  <span className="material-symbols">download</span> .ics
+                </button>
+                <button
+                  type="button"
+                  className="btn-export"
+                  onClick={() => window.print()}
+                  title="Print or save as PDF"
+                >
+                  <span className="material-symbols">picture_as_pdf</span> PDF
+                </button>
+              </div>
+            </div>
             
             <div className="calendar-container">
               {planResult.monthlyCalendar.map((monthData, idx) => (
