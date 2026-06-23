@@ -15,7 +15,7 @@ backend's ADK `McpToolset`.
 
 ## Data
 
-Plant knowledge lives in [db.json](db.json) — a curated catalogue of balcony
+Plant knowledge lives in [db.json](db.json) — a curated catalogue of 50 balcony
 crops with sunlight needs, temperature ranges, sowing/harvest months, companion
 and antagonist species, and growing notes. No API key or network access is
 required.
