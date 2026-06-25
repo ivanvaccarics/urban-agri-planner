@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useT } from "../lib/i18n";
 
 // ---------------------------------------------------------------------------
 // LocationMap — dependency-free OpenStreetMap embed centred on the geocoded
 // coordinates with a marker. No API key or extra library required.
 // ---------------------------------------------------------------------------
 export function LocationMap({ coordinates }) {
+  const { t } = useT();
   const lat = coordinates?.latitude ?? coordinates?.lat;
   const lon = coordinates?.longitude ?? coordinates?.lon;
   if (lat == null || lon == null) return null;
@@ -26,7 +28,7 @@ export function LocationMap({ coordinates }) {
           {Number(lat).toFixed(4)}, {Number(lon).toFixed(4)}
         </span>
         <a href={link} target="_blank" rel="noreferrer">
-          Open in OpenStreetMap ↗
+          {t("map.open")}
         </a>
       </div>
     </div>
@@ -38,13 +40,14 @@ export function LocationMap({ coordinates }) {
 // Plants are placed on a circle; green edges = good companions, clay = avoid.
 // ---------------------------------------------------------------------------
 export function CompanionGraph({ selectedPlants, companionship }) {
+  const { t } = useT();
   const plants = selectedPlants || [];
   const size = 360;
   const center = size / 2;
   const radius = plants.length > 1 ? size / 2 - 64 : 0;
 
   if (plants.length === 0) {
-    return <p className="empty-note">No crops selected to graph.</p>;
+    return <p className="empty-note">{t("graph.empty")}</p>;
   }
 
   const positions = {};
@@ -96,10 +99,10 @@ export function CompanionGraph({ selectedPlants, companionship }) {
       </svg>
       <div className="graph__legend">
         <span className="legend-item">
-          <span className="legend-swatch legend-swatch--good" /> Help each other
+          <span className="legend-swatch legend-swatch--good" /> {t("graph.help")}
         </span>
         <span className="legend-item">
-          <span className="legend-swatch legend-swatch--bad" /> Keep apart
+          <span className="legend-swatch legend-swatch--bad" /> {t("graph.apart")}
         </span>
       </div>
     </div>
@@ -121,9 +124,9 @@ function actionCategory(type) {
   return "care"; // maintenance, protection, watering / shading
 }
 
-const CATEGORY_LABEL = { sow: "Sow", harvest: "Harvest", care: "Care" };
-
 export function YearRibbon({ monthlyCalendar }) {
+  const { t } = useT();
+  const catLabel = { sow: t("ribbon.sow"), harvest: t("ribbon.harvest"), care: t("ribbon.care") };
   const months = monthlyCalendar || [];
   const byMonth = {};
   months.forEach((m) => {
@@ -173,16 +176,16 @@ export function YearRibbon({ monthlyCalendar }) {
                 )}
                 {actions.length === 0 && <span className="dot dot--none" />}
               </span>
-              {isCurrent && <span className="ribbon__now">now</span>}
+              {isCurrent && <span className="ribbon__now">{t("ribbon.now")}</span>}
             </button>
           );
         })}
       </div>
 
       <div className="ribbon__legend">
-        <span className="legend-item"><span className="dot dot--sow" /> Sow</span>
-        <span className="legend-item"><span className="dot dot--harvest" /> Harvest</span>
-        <span className="legend-item"><span className="dot dot--care" /> Care</span>
+        <span className="legend-item"><span className="dot dot--sow" /> {t("ribbon.sow")}</span>
+        <span className="legend-item"><span className="dot dot--harvest" /> {t("ribbon.harvest")}</span>
+        <span className="legend-item"><span className="dot dot--care" /> {t("ribbon.care")}</span>
       </div>
 
       {selectedMonth && (
@@ -192,14 +195,14 @@ export function YearRibbon({ monthlyCalendar }) {
             <span className="mono ribbon__temp">
               {selectedMonth.averageMinTemp}° / {selectedMonth.averageMaxTemp}°C
             </span>
-            {selectedMonth.inSeason && <span className="tag tag--season">In season</span>}
+            {selectedMonth.inSeason && <span className="tag tag--season">{t("ribbon.inSeason")}</span>}
           </div>
           {(selectedMonth.actions || []).length > 0 ? (
             <ul className="ribbon__actions">
               {selectedMonth.actions.map((a, i) => (
                 <li key={i} className="ribbon__action">
                   <span className={`chip chip--${actionCategory(a.type)}`}>
-                    {CATEGORY_LABEL[actionCategory(a.type)]}
+                    {catLabel[actionCategory(a.type)]}
                   </span>
                   <span className="ribbon__action-text">
                     <strong>{a.plant}</strong> — {a.text}
@@ -208,7 +211,7 @@ export function YearRibbon({ monthlyCalendar }) {
               ))}
             </ul>
           ) : (
-            <p className="empty-note">Nothing to do this month — let things grow.</p>
+            <p className="empty-note">{t("ribbon.nothing")}</p>
           )}
         </div>
       )}

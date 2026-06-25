@@ -135,6 +135,16 @@ a { color: var(--green-strong); }
 .ctx .material-symbols { font-size: 16px; color: var(--green); }
 .appbar__actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
+.langtoggle { display: inline-flex; background: var(--inset); border-radius: 999px; padding: 3px; }
+.langtoggle__btn {
+  border: none; background: transparent; cursor: pointer;
+  padding: 5px 11px; border-radius: 999px;
+  font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.03em;
+  color: var(--muted); transition: all 0.15s ease;
+}
+.langtoggle__btn.is-active { background: var(--surface); color: var(--green-strong); box-shadow: var(--shadow-sm); }
+.langtoggle__btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
 .shell {
   max-width: var(--shell-w);
   margin: 0 auto;

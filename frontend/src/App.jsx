@@ -1,26 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { downloadICS, downloadPDF } from "./lib/exporters";
 import { LocationMap, CompanionGraph, YearRibbon } from "./components/viz";
+import { useT } from "./lib/i18n";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5001";
 
-const EXPOSURES = [
-  ["South", "Full sun, all day"],
-  ["South-East", "Sun until early afternoon"],
-  ["South-West", "Sun from midday on"],
-  ["East", "Morning sun"],
-  ["West", "Afternoon sun"],
-  ["North-East", "Soft morning light"],
-  ["North-West", "Soft evening light"],
-  ["North", "Mostly shade"],
-];
+const EXPOSURES = ["South", "South-East", "South-West", "East", "West", "North-East", "North-West", "North"];
 
-const SEASONS = [
-  ["Spring", "Mar–May"],
-  ["Summer", "Jun–Aug"],
-  ["Autumn", "Sep–Nov"],
-  ["Winter", "Dec–Feb"],
-];
+const SEASONS = ["Spring", "Summer", "Autumn", "Winter"];
 
 // --------------------------------------------------------------------------
 // Small presentational helpers
@@ -67,10 +54,11 @@ function AgentActivity({ steps }) {
 }
 
 function Stepper({ step }) {
+  const { t } = useT();
   const steps = [
-    ["Your space", "tune"],
-    ["Review & approve", "front_hand"],
-    ["Your plan", "calendar_month"],
+    [t("stepper.space"), "tune"],
+    [t("stepper.review"), "front_hand"],
+    [t("stepper.plan"), "calendar_month"],
   ];
   return (
     <nav className="stepper" aria-label="Progress">
@@ -94,6 +82,7 @@ function Stepper({ step }) {
 }
 
 function CropCard({ plant, selected, onToggle, proposed, readonly }) {
+  const { t } = useT();
   return (
     <button
       type="button"
@@ -107,7 +96,7 @@ function CropCard({ plant, selected, onToggle, proposed, readonly }) {
           <Icon name={selected ? "check_circle" : "radio_button_unchecked"} />
         </span>
       )}
-      {proposed && <span className="cropcard__badge">Suggested</span>}
+      {proposed && <span className="cropcard__badge">{t("crop.suggested")}</span>}
       <span className="cropcard__name">{plant.name}</span>
       <span className="cropcard__sci">{plant.scientificName}</span>
       <span className="cropcard__meta">
@@ -123,6 +112,7 @@ function CropCard({ plant, selected, onToggle, proposed, readonly }) {
 // App
 // --------------------------------------------------------------------------
 function App() {
+  const { t, lang, setLang } = useT();
   const [address, setAddress] = useState("Via Roma 10, Milan, Italy");
   const [sunlightHours, setSunlightHours] = useState(6);
   const [exposure, setExposure] = useState("South");
@@ -192,7 +182,7 @@ function App() {
         body: JSON.stringify({ sessionId: planResult.sessionId, message: question }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || "The advisor could not answer.");
+      if (!response.ok) throw new Error(data.detail || t("ask.error"));
       setChatMessages((prev) => [
         ...prev,
         { role: "advisor", text: data.reply, steps: data.steps || [] },
@@ -255,7 +245,7 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.detail || data.error || "Unable to compute the cultivation plan.");
+        throw new Error(data.detail || data.error || t("err.plan"));
       }
       if (data.steps && data.steps.length > 0) await animateSteps(data.steps);
       if (data.status === "confirmation_required") {
@@ -264,7 +254,7 @@ function App() {
       } else if (data.status === "completed") {
         setPlanResult(data);
       } else {
-        throw new Error("Unexpected response from the server.");
+        throw new Error(t("err.unexpected"));
       }
     } catch (err) {
       console.error(err);
@@ -290,7 +280,7 @@ function App() {
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || data.error || "Error during confirmation.");
+      if (!response.ok) throw new Error(data.detail || data.error || t("err.confirm"));
       if (data.steps && data.steps.length > 0) setDisplayedSteps(data.steps);
       if (data.status === "completed") {
         setPlanResult(data);
@@ -301,7 +291,7 @@ function App() {
         setRejection(data);
         setPendingConfirmation(null);
       } else {
-        throw new Error("Unexpected response from the server.");
+        throw new Error(t("err.unexpected"));
       }
     } catch (err) {
       console.error(err);
@@ -335,12 +325,16 @@ function App() {
         {contextLocation && (
           <div className="appbar__context">
             <span className="ctx"><Icon name="location_on" />{contextLocation.split(",")[0]}</span>
-            {contextZone && <span className="ctx mono">Zone {contextZone}</span>}
-            {planResult?.season && <span className="ctx mono">{planResult.season}</span>}
+            {contextZone && <span className="ctx mono">{t("appbar.zone", { zone: contextZone })}</span>}
+            {planResult?.season && <span className="ctx mono">{t(`season.${planResult.season}`)}</span>}
           </div>
         )}
 
         <div className="appbar__actions">
+          <div className="langtoggle" role="group" aria-label="Language">
+            <button className={`langtoggle__btn${lang === "en" ? " is-active" : ""}`} onClick={() => setLang("en")} aria-pressed={lang === "en"}>EN</button>
+            <button className={`langtoggle__btn${lang === "it" ? " is-active" : ""}`} onClick={() => setLang("it")} aria-pressed={lang === "it"}>IT</button>
+          </div>
           {planResult && (
             <>
               <button className="btn btn--ghost" onClick={() => downloadICS(planResult)}>
@@ -353,7 +347,7 @@ function App() {
           )}
           {(planResult || pendingConfirmation || rejection) && (
             <button className="btn btn--primary" onClick={startOver}>
-              <Icon name="add" /> <span className="btn__label">New plan</span>
+              <Icon name="add" /> <span className="btn__label">{t("appbar.newPlan")}</span>
             </button>
           )}
         </div>
@@ -366,24 +360,21 @@ function App() {
         {step === 1 && !loading && (
           <div className="intake">
             <section className="intake__intro">
-              <p className="eyebrow mono">Multi-agent growing planner</p>
+              <p className="eyebrow mono">{t("intake.eyebrow")}</p>
               <h1 className="intake__headline">
-                Tell us about your balcony.<br />We'll plan the whole growing year.
+                {t("intake.headline.l1")}<br />{t("intake.headline.l2")}
               </h1>
-              <p className="intake__sub">
-                AI agents cross-reference a decade of local climate, your light and exposure,
-                and the needs of 78 crops — then a reviewer critiques the picks before you approve them.
-              </p>
+              <p className="intake__sub">{t("intake.sub")}</p>
               <ul className="intake__points">
-                <li><Icon name="public" /> Grounded in your address's real microclimate</li>
-                <li><Icon name="rate_review" /> Independently reviewed, approved by you</li>
-                <li><Icon name="savings" /> Harvest, savings and pest advice included</li>
+                <li><Icon name="public" /> {t("intake.point.climate")}</li>
+                <li><Icon name="rate_review" /> {t("intake.point.review")}</li>
+                <li><Icon name="savings" /> {t("intake.point.savings")}</li>
               </ul>
             </section>
 
             <section className="panel intake__form">
               <div className="field">
-                <label htmlFor="address-input" className="field__label">Where is your space?</label>
+                <label htmlFor="address-input" className="field__label">{t("form.address.label")}</label>
                 <div className="autocomplete">
                   <Icon name="search" className="field__icon" />
                   <input
@@ -394,7 +385,7 @@ function App() {
                     onChange={(e) => { setAddress(e.target.value); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                    placeholder="Street, city — e.g. Via Roma 10, Milan"
+                    placeholder={t("form.address.placeholder")}
                     autoComplete="off"
                   />
                   {showSuggestions && suggestions.length > 0 && (
@@ -408,13 +399,13 @@ function App() {
                     </ul>
                   )}
                 </div>
-                <p className="field__hint">We use this to look up your climate and frost dates.</p>
+                <p className="field__hint">{t("form.address.hint")}</p>
               </div>
 
               <div className="field">
                 <div className="field__label-row">
-                  <label htmlFor="sun-input" className="field__label">How much direct sun?</label>
-                  <span className="field__value mono">{sunlightHours} h/day</span>
+                  <label htmlFor="sun-input" className="field__label">{t("form.sun.label")}</label>
+                  <span className="field__value mono">{t("form.sun.unit", { n: sunlightHours })}</span>
                 </div>
                 <input
                   id="sun-input"
@@ -424,43 +415,43 @@ function App() {
                   value={sunlightHours}
                   onChange={(e) => setSunlightHours(e.target.value)}
                 />
-                <div className="slider__scale mono"><span>Shade</span><span>Part sun</span><span>Full sun</span></div>
+                <div className="slider__scale mono"><span>{t("form.sun.shade")}</span><span>{t("form.sun.part")}</span><span>{t("form.sun.full")}</span></div>
               </div>
 
               <div className="field">
-                <label htmlFor="exposure-select" className="field__label">Which way does it face?</label>
+                <label htmlFor="exposure-select" className="field__label">{t("form.exposure.label")}</label>
                 <select id="exposure-select" className="control" value={exposure} onChange={(e) => setExposure(e.target.value)}>
-                  {EXPOSURES.map(([val, hint]) => <option key={val} value={val}>{val} — {hint}</option>)}
+                  {EXPOSURES.map((val) => <option key={val} value={val}>{val} — {t(`exp.${val}`)}</option>)}
                 </select>
               </div>
 
               <div className="field">
-                <label htmlFor="season-select" className="field__label">When do you want to start?</label>
+                <label htmlFor="season-select" className="field__label">{t("form.season.label")}</label>
                 <select id="season-select" className="control" value={season} onChange={(e) => setSeason(e.target.value)}>
-                  {SEASONS.map(([val, hint]) => <option key={val} value={val}>{val} ({hint})</option>)}
+                  {SEASONS.map((val) => <option key={val} value={val}>{t(`season.${val}`)} ({t(`season.${val}.range`)})</option>)}
                 </select>
               </div>
 
               <div className="field">
-                <span className="field__label">Growing setup</span>
-                <div className="segmented" role="group" aria-label="Growing setup">
+                <span className="field__label">{t("form.setup.label")}</span>
+                <div className="segmented" role="group" aria-label={t("form.setup.label")}>
                   <button type="button" className={`seg${!greenhouse ? " is-active" : ""}`} onClick={() => setGreenhouse(false)}>
-                    <Icon name="wb_sunny" /> Outdoor
+                    <Icon name="wb_sunny" /> {t("form.setup.outdoor")}
                   </button>
                   <button type="button" className={`seg${greenhouse ? " is-active" : ""}`} onClick={() => setGreenhouse(true)}>
-                    <Icon name="potted_plant" /> Greenhouse
+                    <Icon name="potted_plant" /> {t("form.setup.greenhouse")}
                   </button>
                 </div>
               </div>
 
               <button className="btn btn--primary btn--block btn--lg" onClick={handleGeneratePlan} disabled={loading || !address}>
-                <Icon name="auto_awesome" /> Generate my plan
+                <Icon name="auto_awesome" /> {t("form.submit")}
               </button>
 
               {error && (
                 <div className="alert alert--error">
                   <Icon name="error" />
-                  <div><strong>Couldn't build the plan.</strong><p>{error}</p></div>
+                  <div><strong>{t("form.error.title")}</strong><p>{error}</p></div>
                 </div>
               )}
             </section>
@@ -473,8 +464,8 @@ function App() {
             <div className="loading__head">
               <span className="spinner" />
               <div>
-                <h2>Planning your growing year</h2>
-                <p className="muted">The agents are querying the climate and botanical servers…</p>
+                <h2>{t("loading.title")}</h2>
+                <p className="muted">{t("loading.sub")}</p>
               </div>
             </div>
             <AgentActivity steps={displayedSteps} />
@@ -486,17 +477,16 @@ function App() {
           <section className="checkpoint">
             <div className="panel checkpoint__intro">
               <div className="checkpoint__title">
-                <span className="checkpoint__pill"><Icon name="front_hand" /> Your approval needed</span>
-                <h2>{pendingConfirmation.checkpoint?.title || "Review the suggested crops"}</h2>
+                <span className="checkpoint__pill"><Icon name="front_hand" /> {t("checkpoint.pill")}</span>
+                <h2>{pendingConfirmation.checkpoint?.title || t("checkpoint.defaultTitle")}</h2>
                 <p className="muted">
-                  {pendingConfirmation.checkpoint?.message ||
-                    "The planner paused before finalising. Keep, add or drop crops, then approve."}
+                  {pendingConfirmation.checkpoint?.message || t("checkpoint.defaultMsg")}
                 </p>
               </div>
               <div className="checkpoint__climate">
                 <span><Icon name="location_on" />{pendingConfirmation.location}</span>
-                <span className="mono">Zone {pendingConfirmation.estimatedHardinessZone}</span>
-                <span className="mono">Min {pendingConfirmation.absoluteMinTempYear}°C</span>
+                <span className="mono">{t("appbar.zone", { zone: pendingConfirmation.estimatedHardinessZone })}</span>
+                <span className="mono">{t("checkpoint.min", { t: pendingConfirmation.absoluteMinTempYear })}</span>
               </div>
               {pendingConfirmation.rationale && <p className="quote">“{pendingConfirmation.rationale}”</p>}
             </div>
@@ -505,7 +495,7 @@ function App() {
               <div className="panel scorecard">
                 <div className="scorecard__head">
                   <div>
-                    <p className="eyebrow mono">Reviewer agent · independent critique</p>
+                    <p className="eyebrow mono">{t("checkpoint.reviewer")}</p>
                     {pendingConfirmation.review.verdict && (
                       <p className="scorecard__verdict">“{pendingConfirmation.review.verdict}”</p>
                     )}
@@ -520,9 +510,9 @@ function App() {
                   )}
                 </div>
                 <div className="scorecard__cols">
-                  {[["strengths", "Strengths", "thumb_up", "good"],
-                    ["concerns", "Watch outs", "priority_high", "bad"],
-                    ["suggestions", "Ideas", "lightbulb", "info"]].map(([key, label, icon, tone]) =>
+                  {[["strengths", t("checkpoint.strengths"), "thumb_up", "good"],
+                    ["concerns", t("checkpoint.concerns"), "priority_high", "bad"],
+                    ["suggestions", t("checkpoint.ideas"), "lightbulb", "info"]].map(([key, label, icon, tone]) =>
                     (pendingConfirmation.review[key] || []).length > 0 ? (
                       <div key={key} className="scorecard__col">
                         <h4 className={`scorecard__col-title is-${tone}`}><Icon name={icon} /> {label}</h4>
@@ -536,10 +526,10 @@ function App() {
 
             <div className="panel">
               <div className="section-head">
-                <h3 className="panel__title"><Icon name="grass" /> Choose your crops</h3>
-                <span className="counter mono">{checkpointSelection.length} selected</span>
+                <h3 className="panel__title"><Icon name="grass" /> {t("checkpoint.chooseCrops")}</h3>
+                <span className="counter mono">{t("checkpoint.selected", { n: checkpointSelection.length })}</span>
               </div>
-              <p className="muted section-head__sub">Suggested crops are pre-selected. Tap a card to add or remove it.</p>
+              <p className="muted section-head__sub">{t("checkpoint.chooseHint")}</p>
               <div className="cropgrid">
                 {(pendingConfirmation.compatiblePlants || []).map((plant) => (
                   <CropCard
@@ -554,7 +544,7 @@ function App() {
 
               <div className="checkpoint__actions">
                 <button className="btn btn--danger-ghost" onClick={() => handleConfirm(false)} disabled={confirming}>
-                  <Icon name="close" /> Reject all
+                  <Icon name="close" /> {t("checkpoint.rejectAll")}
                 </button>
                 <button
                   className="btn btn--primary btn--lg"
@@ -562,10 +552,10 @@ function App() {
                   disabled={confirming || checkpointSelection.length === 0}
                 >
                   <Icon name="check" />
-                  {confirming ? "Generating…"
+                  {confirming ? t("checkpoint.generating")
                     : sameSelection(checkpointSelection, pendingConfirmation.proposedPlantIds || [])
-                      ? "Approve & build plan"
-                      : "Approve my selection"}
+                      ? t("checkpoint.approveBuild")
+                      : t("checkpoint.approveSelection")}
                 </button>
               </div>
               {error && <div className="alert alert--error"><Icon name="error" /><div><p>{error}</p></div></div>}
@@ -577,9 +567,9 @@ function App() {
         {step === 2 && rejection && !loading && (
           <section className="panel state">
             <Icon name="block" className="state__icon is-danger" />
-            <h2>Selection rejected</h2>
-            <p className="muted">{rejection.message || "No plan was generated."}</p>
-            <button className="btn btn--primary" onClick={startOver}><Icon name="restart_alt" /> Start over</button>
+            <h2>{t("checkpoint.rejectedTitle")}</h2>
+            <p className="muted">{rejection.message || t("checkpoint.rejectedMsg")}</p>
+            <button className="btn btn--primary" onClick={startOver}><Icon name="restart_alt" /> {t("checkpoint.startOver")}</button>
           </section>
         )}
 
@@ -611,26 +601,27 @@ function App() {
 // Plan dashboard — tabbed result view
 // --------------------------------------------------------------------------
 function PlanDashboard({ plan, activeTab, setActiveTab, companionView, setCompanionView, displayedSteps, chat }) {
+  const { t } = useT();
   const hasSavings = plan.yieldEstimate && (plan.yieldEstimate.crops || []).length > 0;
   const hasPests = plan.pestAdvisory && (plan.pestAdvisory.risks || []).length > 0;
 
   const tabs = [
-    ["overview", "Overview", "dashboard"],
-    ["calendar", "Calendar", "calendar_month"],
-    ["crops", "Crops", "grass"],
-    ["companions", "Companions", "group_work"],
-    hasPests && ["pests", "Pests", "pest_control"],
-    hasSavings && ["savings", "Savings", "savings"],
-    ["ask", "Ask", "forum"],
+    ["overview", t("tab.overview"), "dashboard"],
+    ["calendar", t("tab.calendar"), "calendar_month"],
+    ["crops", t("tab.crops"), "grass"],
+    ["companions", t("tab.companions"), "group_work"],
+    hasPests && ["pests", t("tab.pests"), "pest_control"],
+    hasSavings && ["savings", t("tab.savings"), "savings"],
+    ["ask", t("tab.ask"), "forum"],
   ].filter(Boolean);
 
   const sec = plan.security;
   const securityTone = sec?.checkpointSkipped ? "skipped" : sec?.adjusted ? "adjusted" : "approved";
   const securityText = sec?.checkpointSkipped
-    ? "No approval checkpoint was triggered"
+    ? t("security.skipped")
     : sec?.adjusted
-      ? "Approved by you — you adjusted the selection"
-      : "Approved by you at the safety checkpoint";
+      ? t("security.adjusted")
+      : t("security.approved");
 
   return (
     <div className="dash">
@@ -682,53 +673,54 @@ function Metric({ icon, value, label, tone }) {
 }
 
 function OverviewTab({ plan, displayedSteps, goCalendar }) {
+  const { t } = useT();
   const ye = plan.yieldEstimate;
   const ff = plan.frostDates;
   return (
     <div className="grid grid--overview">
       <section className="panel">
-        <h3 className="panel__title"><Icon name="insights" /> At a glance</h3>
+        <h3 className="panel__title"><Icon name="insights" /> {t("overview.glance")}</h3>
         <div className="metrics">
-          <Metric icon="thermostat" value={plan.estimatedHardinessZone || "—"} label="USDA zone" />
-          {ff?.frostFreeDays != null && <Metric icon="wb_sunny" value={ff.frostFreeDays} label="Frost-free days" />}
-          {ye && <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label="Est. harvest" tone="green" />}
-          {ye && <Metric icon="savings" value={`€${ye.totalValueEur}`} label="Grocery value" tone="amber" />}
+          <Metric icon="thermostat" value={plan.estimatedHardinessZone || "—"} label={t("overview.zone")} />
+          {ff?.frostFreeDays != null && <Metric icon="wb_sunny" value={ff.frostFreeDays} label={t("overview.frostFree")} />}
+          {ye && <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label={t("overview.harvest")} tone="green" />}
+          {ye && <Metric icon="savings" value={`€${ye.totalValueEur}`} label={t("overview.value")} tone="amber" />}
         </div>
         {plan.coordinatorComment && <p className="quote">{plan.coordinatorComment}</p>}
         <div className="chips">
-          <span className="chip-pill"><Icon name="calendar_month" /> {plan.season || "—"}</span>
-          <span className="chip-pill"><Icon name={plan.greenhouse ? "potted_plant" : "wb_sunny"} /> {plan.greenhouse ? "Greenhouse" : "Outdoor"}</span>
-          <span className="chip-pill"><Icon name="grass" /> {(plan.selectedPlants || []).length} crops</span>
+          <span className="chip-pill"><Icon name="calendar_month" /> {plan.season ? t(`season.${plan.season}`) : "—"}</span>
+          <span className="chip-pill"><Icon name={plan.greenhouse ? "potted_plant" : "wb_sunny"} /> {plan.greenhouse ? t("form.setup.greenhouse") : t("form.setup.outdoor")}</span>
+          <span className="chip-pill"><Icon name="grass" /> {t("overview.crops", { n: (plan.selectedPlants || []).length })}</span>
         </div>
         <button className="btn btn--ghost btn--block" onClick={goCalendar}>
-          <Icon name="calendar_month" /> See the growing calendar
+          <Icon name="calendar_month" /> {t("overview.seeCalendar")}
         </button>
       </section>
 
       <section className="panel">
-        <h3 className="panel__title"><Icon name="location_on" /> Your location</h3>
+        <h3 className="panel__title"><Icon name="location_on" /> {t("overview.location")}</h3>
         <p className="muted small">{plan.location}</p>
         {plan.climateYears && (
           <p className="muted xsmall">
-            {plan.climateYears.count}-year climate average ({plan.climateYears.start}–{plan.climateYears.end})
+            {t("overview.climateAvg", { n: plan.climateYears.count, start: plan.climateYears.start, end: plan.climateYears.end })}
           </p>
         )}
         <LocationMap coordinates={plan.coordinates} />
         {ff && (
           <div className="frost">
-            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">Last spring frost</span><span className="frost__val">{ff.lastSpringFrost || "—"}</span></div></div>
-            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">First autumn frost</span><span className="frost__val">{ff.firstAutumnFrost || "—"}</span></div></div>
+            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">{t("overview.lastFrost")}</span><span className="frost__val">{ff.lastSpringFrost || "—"}</span></div></div>
+            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">{t("overview.firstFrost")}</span><span className="frost__val">{ff.firstAutumnFrost || "—"}</span></div></div>
           </div>
         )}
         {plan.wateringAdvice && (
           <div className={`watering watering--${plan.wateringAdvice.level}`}>
             <Icon name="water_drop" />
             <div>
-              <strong>Next 7 days</strong>
+              <strong>{t("overview.next7")}</strong>
               <p>{plan.wateringAdvice.advice}</p>
               <span className="watering__meta mono">
-                {plan.wateringAdvice.totalPrecipitationMm} mm · {plan.wateringAdvice.rainyDays} rainy day(s)
-                {plan.wateringAdvice.avgMaxTempC != null ? ` · max ${plan.wateringAdvice.avgMaxTempC}°C` : ""}
+                {t("overview.rainy", { mm: plan.wateringAdvice.totalPrecipitationMm, days: plan.wateringAdvice.rainyDays })}
+                {plan.wateringAdvice.avgMaxTempC != null ? t("overview.maxTemp", { t: plan.wateringAdvice.avgMaxTempC }) : ""}
               </span>
             </div>
           </div>
@@ -738,7 +730,7 @@ function OverviewTab({ plan, displayedSteps, goCalendar }) {
       {displayedSteps.length > 0 && (
         <section className="panel grid--full">
           <details className="disclosure">
-            <summary><Icon name="network_node" /> Behind the plan — agent activity ({displayedSteps.length} steps)</summary>
+            <summary><Icon name="network_node" /> {t("overview.activityTitle", { n: displayedSteps.length })}</summary>
             <AgentActivity steps={displayedSteps} />
           </details>
         </section>
@@ -748,38 +740,39 @@ function OverviewTab({ plan, displayedSteps, goCalendar }) {
 }
 
 function CalendarTab({ plan }) {
+  const { t } = useT();
   return (
     <div className="grid grid--single">
       <section className="panel">
-        <h3 className="panel__title"><Icon name="calendar_month" /> Your growing year</h3>
-        <p className="muted section-head__sub">Tap a month to see exactly what to do.</p>
+        <h3 className="panel__title"><Icon name="calendar_month" /> {t("calendar.title")}</h3>
+        <p className="muted section-head__sub">{t("calendar.tapMonth")}</p>
         <YearRibbon monthlyCalendar={plan.monthlyCalendar || []} />
       </section>
 
       <section className="panel">
-        <h3 className="panel__title"><Icon name="event_available" /> Planting schedule</h3>
+        <h3 className="panel__title"><Icon name="event_available" /> {t("calendar.scheduleTitle")}</h3>
         <p className="muted section-head__sub">
-          When to put each crop out and when to harvest{plan.greenhouse ? " · greenhouse" : ""}.
+          {t("calendar.scheduleSub", { gh: plan.greenhouse ? t("calendar.scheduleSub.gh") : "" })}
         </p>
         <div className="schedule">
           {(plan.plantingSchedule || []).map((row, idx) => (
             <div key={idx} className={`schedule__row${row.inSeason ? " is-season" : ""}`}>
               <div className="schedule__plant">
                 <span className="schedule__name">{row.plant}</span>
-                {row.inSeason && <span className="tag tag--season">In season</span>}
+                {row.inSeason && <span className="tag tag--season">{t("calendar.inSeason")}</span>}
               </div>
               <div className="schedule__win">
                 <Icon name="grass" className="is-green" />
-                <div><span className="schedule__lbl">Put out</span><span className="schedule__val">{row.putInField}</span></div>
+                <div><span className="schedule__lbl">{t("calendar.putOut")}</span><span className="schedule__val">{row.putInField}</span></div>
               </div>
               <div className="schedule__win">
                 <Icon name="nutrition" className="is-amber" />
-                <div><span className="schedule__lbl">Harvest</span><span className="schedule__val">{row.harvest}</span></div>
+                <div><span className="schedule__lbl">{t("calendar.harvest")}</span><span className="schedule__val">{row.harvest}</span></div>
               </div>
               {row.note && <div className="schedule__note">{row.note}</div>}
             </div>
           ))}
-          {(plan.plantingSchedule || []).length === 0 && <p className="empty-note">No crops scheduled.</p>}
+          {(plan.plantingSchedule || []).length === 0 && <p className="empty-note">{t("calendar.noCrops")}</p>}
         </div>
       </section>
     </div>
@@ -787,17 +780,16 @@ function CalendarTab({ plan }) {
 }
 
 function CropsTab({ plan }) {
+  const { t } = useT();
   const selectedIds = new Set((plan.selectedPlants || []).map((p) => p.id));
   return (
     <div className="grid grid--single">
       <section className="panel">
         <div className="section-head">
-          <h3 className="panel__title"><Icon name="grass" /> Crops in your plan</h3>
-          <span className="counter mono">{(plan.selectedPlants || []).length} growing</span>
+          <h3 className="panel__title"><Icon name="grass" /> {t("crops.title")}</h3>
+          <span className="counter mono">{t("crops.growing", { n: (plan.selectedPlants || []).length })}</span>
         </div>
-        <p className="muted section-head__sub">
-          Highlighted crops were approved and drive your calendar. The rest were analysed but left out.
-        </p>
+        <p className="muted section-head__sub">{t("crops.sub")}</p>
         <div className="cropgrid">
           {(plan.compatiblePlants || []).map((plant) => (
             <CropCard key={plant.id} plant={plant} selected={selectedIds.has(plant.id)} readonly />
@@ -809,16 +801,17 @@ function CropsTab({ plan }) {
 }
 
 function CompanionsTab({ plan, view, setView }) {
+  const { t } = useT();
   const c = plan.companionship || { companions: [], antagonists: [], warnings: [] };
   const empty = c.companions.length === 0 && c.antagonists.length === 0 && c.warnings.length === 0;
   return (
     <div className="grid grid--single">
       <section className="panel">
         <div className="section-head">
-          <h3 className="panel__title"><Icon name="group_work" /> Companion planting</h3>
-          <div className="segmented segmented--sm" role="group" aria-label="View">
-            <button className={`seg${view === "list" ? " is-active" : ""}`} onClick={() => setView("list")}><Icon name="list" /> List</button>
-            <button className={`seg${view === "graph" ? " is-active" : ""}`} onClick={() => setView("graph")}><Icon name="hub" /> Graph</button>
+          <h3 className="panel__title"><Icon name="group_work" /> {t("companions.title")}</h3>
+          <div className="segmented segmented--sm" role="group" aria-label={t("companions.title")}>
+            <button className={`seg${view === "list" ? " is-active" : ""}`} onClick={() => setView("list")}><Icon name="list" /> {t("companions.list")}</button>
+            <button className={`seg${view === "graph" ? " is-active" : ""}`} onClick={() => setView("graph")}><Icon name="hub" /> {t("companions.graph")}</button>
           </div>
         </div>
         {plan.plannerComment && <p className="quote">{plan.plannerComment}</p>}
@@ -826,7 +819,7 @@ function CompanionsTab({ plan, view, setView }) {
         {view === "graph" ? (
           <CompanionGraph selectedPlants={plan.selectedPlants} companionship={c} />
         ) : empty ? (
-          <p className="empty-note">No notable companion relationships for this selection.</p>
+          <p className="empty-note">{t("companions.empty")}</p>
         ) : (
           <div className="rel">
             {c.companions.map((x, i) => (
@@ -844,7 +837,7 @@ function CompanionsTab({ plan, view, setView }) {
             {c.warnings.map((w, i) => (
               <div key={`w${i}`} className="rel__item rel__item--warn">
                 <Icon name="warning" />
-                <div><strong>Botanist's note</strong><p>{w}</p></div>
+                <div><strong>{t("companions.note")}</strong><p>{w}</p></div>
               </div>
             ))}
           </div>
@@ -855,14 +848,13 @@ function CompanionsTab({ plan, view, setView }) {
 }
 
 function PestsTab({ plan }) {
+  const { t } = useT();
   const adv = plan.pestAdvisory;
   return (
     <div className="grid grid--single">
       <section className="panel">
-        <h3 className="panel__title"><Icon name="pest_control" /> Pests & diseases</h3>
-        <p className="muted section-head__sub">
-          Common issues for your crops with organic remedies — and which plants help keep them down.
-        </p>
+        <h3 className="panel__title"><Icon name="pest_control" /> {t("pests.title")}</h3>
+        <p className="muted section-head__sub">{t("pests.sub")}</p>
         {adv.climateNote && <div className="note"><Icon name="thermostat" /><p>{adv.climateNote}</p></div>}
         <div className="pests">
           {adv.risks.map((risk, idx) => (
@@ -877,7 +869,7 @@ function PestsTab({ plan }) {
                   <p className="pests__remedy">{issue.remedy}</p>
                   {issue.deterredBy.length > 0 && (
                     <div className="pests__allies">
-                      <Icon name="shield" /> Helped by:
+                      <Icon name="shield" /> {t("pests.helpedBy")}
                       {issue.deterredBy.map((ally, k) => <span key={k} className="ally-chip">{ally}</span>)}
                     </div>
                   )}
@@ -889,7 +881,7 @@ function PestsTab({ plan }) {
         {(adv.protectiveAllies || []).length > 0 && (
           <div className="note note--green">
             <Icon name="verified_user" />
-            <p><strong>Your protective allies:</strong>{" "}
+            <p><strong>{t("pests.allies")}</strong>{" "}
               {adv.protectiveAllies.map((a) => `${a.plant} (${a.deters.join(", ")})`).join(" · ")}</p>
           </div>
         )}
@@ -902,18 +894,17 @@ function PestsTab({ plan }) {
 }
 
 function SavingsTab({ plan }) {
+  const { t } = useT();
   const ye = plan.yieldEstimate;
   const max = Math.max(1, ...(ye.crops || []).map((c) => c.valueEur || 0));
   return (
     <div className="grid grid--single">
       <section className="panel">
-        <h3 className="panel__title"><Icon name="savings" /> Harvest & savings</h3>
-        <p className="muted section-head__sub">
-          A full-season estimate for your selection — and what the same produce would cost at the shop.
-        </p>
+        <h3 className="panel__title"><Icon name="savings" /> {t("savings.title")}</h3>
+        <p className="muted section-head__sub">{t("savings.sub")}</p>
         <div className="metrics metrics--2">
-          <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label="Estimated harvest" tone="green" />
-          <Metric icon="savings" value={`€${ye.totalValueEur}`} label="Grocery value / year" tone="amber" />
+          <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label={t("savings.harvest")} tone="green" />
+          <Metric icon="savings" value={`€${ye.totalValueEur}`} label={t("savings.value")} tone="amber" />
         </div>
         <div className="bars">
           {(ye.crops || []).map((row, idx) => {
@@ -925,7 +916,7 @@ function SavingsTab({ plan }) {
                   {!row.ornamental && <div className="bars__fill" style={{ width: `${Math.max(pct, 4)}%` }} />}
                 </div>
                 <span className="bars__val mono">
-                  {row.ornamental ? "companion" : `${row.yieldKg}kg · €${row.valueEur}`}
+                  {row.ornamental ? t("savings.companion") : `${row.yieldKg}kg · €${row.valueEur}`}
                 </span>
               </div>
             );
@@ -938,18 +929,17 @@ function SavingsTab({ plan }) {
 }
 
 function AskTab({ chat }) {
+  const { t } = useT();
   return (
     <div className="grid grid--single">
       <section className="panel chat">
-        <h3 className="panel__title"><Icon name="forum" /> Ask the garden advisor</h3>
-        <p className="muted section-head__sub">
-          Follow-up questions about your plan — substitutions, watering, timing. Answers are re-checked against your climate and crops.
-        </p>
+        <h3 className="panel__title"><Icon name="forum" /> {t("ask.title")}</h3>
+        <p className="muted section-head__sub">{t("ask.sub")}</p>
         <div className="chat__window" ref={chat.windowRef}>
           {chat.messages.length === 0 && (
             <div className="chat__empty">
               <Icon name="eco" />
-              <p>Try “Can I swap basil for mint?” or “Which crop needs the least water?”</p>
+              <p>{t("ask.empty")}</p>
             </div>
           )}
           {chat.messages.map((msg, idx) => (
@@ -978,7 +968,7 @@ function AskTab({ chat }) {
           <input
             type="text"
             className="control"
-            placeholder="Ask about your plan…"
+            placeholder={t("ask.placeholder")}
             value={chat.input}
             onChange={(e) => chat.setInput(e.target.value)}
             disabled={chat.loading}
