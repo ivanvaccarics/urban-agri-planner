@@ -11,7 +11,9 @@ It targets the **"AI for Good" — Agriculture** theme and is built around three
 1. **Multi-Agent Systems** — orchestration with the **Google Agent Development Kit (ADK)**.
 2. **Model Context Protocol (MCP)** — two Python MCP servers (FastMCP) over `stdio` transport.
 3. **Agent Security & Control** — a **human-in-the-loop (HITL)** checkpoint that pauses the
-   agent before finalising the crops and requires explicit user approval.
+   agent before finalising the crops and requires explicit user approval. An independent
+   **ReviewerAgent** scores the proposed selection at that gate so the human approves with
+   an expert second opinion.
 
 > 📖 For a deep technical walkthrough (pillar-by-pillar internals, API contract, design
 > rationale), see [walkthrough.md](walkthrough.md).
@@ -26,15 +28,22 @@ flowchart LR
     API --> PIPE["SequentialAgent<br/>CropPlanningPipeline"]
     PIPE --> GEO["GeoClimateAgent"]
     PIPE --> PLAN["PlannerAgent"]
+    API --> REV["ReviewerAgent<br/>(critique @ checkpoint)"]
+    API --> ADV["AdvisorAgent<br/>(follow-up chat)"]
     GEO -->|"MCP / stdio"| CLIM["mcp-climate-server<br/>(FastMCP)"]
     PLAN -->|"MCP / stdio"| BOT["mcp-botanical-server<br/>(FastMCP)"]
+    REV -->|"MCP / stdio"| BOT
+    ADV -->|"MCP / stdio"| BOT
     CLIM --> NOM["Nominatim"]
     CLIM --> OM["Open-Meteo"]
     BOT --> DB[("db.json<br/>plant database")]
     PLAN -.->|"HITL checkpoint"| UI
 ```
 
-The model powering both `LlmAgent` instances is **`gemma-4-26b-a4b-it`**.
+The model powering every `LlmAgent` instance is **`gemma-4-26b-a4b-it`**. The
+`GeoClimateAgent` → `PlannerAgent` pipeline runs under one `Runner`; the `ReviewerAgent`
+(checkpoint critic) and `AdvisorAgent` (post-plan chat) each run on their own dedicated
+`Runner`.
 
 ---
 
@@ -42,17 +51,19 @@ The model powering both `LlmAgent` instances is **`gemma-4-26b-a4b-it`**.
 
 | Component | Tech | Purpose |
 | --- | --- | --- |
-| [backend/](backend/) | Python · Google ADK · FastAPI | Multi-agent orchestrator. Runs the `CropPlanningPipeline` (`GeoClimateAgent` → `PlannerAgent`), connects to the MCP servers, and exposes the REST API on port `5001`. Enforces the HITL checkpoint, validates inputs, rate-limits the geocoding proxy, and keeps a bounded session store. |
-| [frontend/](frontend/) | Vite · React | Single-page dashboard. Collects address/sunlight/exposure, drives the two-step plan flow, and renders an interactive **location map** + USDA zone, the calendar, planting schedule, frost dates, watering advice, an estimated **harvest & grocery-savings** panel, a **pest & disease advisor**, a **follow-up chat** with the garden advisor, and a companion-planting **list/graph** view — with `.ics` / PDF export. |
+| [backend/](backend/) | Python · Google ADK · FastAPI | Multi-agent orchestrator. Runs the `CropPlanningPipeline` (`GeoClimateAgent` → `PlannerAgent`), a `ReviewerAgent` that critiques the proposal at the checkpoint, and an `AdvisorAgent` for follow-up chat. Connects to the MCP servers and exposes the REST API on port `5001`. Enforces the HITL checkpoint, validates inputs, rate-limits the geocoding proxy, and keeps a bounded session store. |
+| [frontend/](frontend/) | Vite · React | Single-page dashboard. Collects address/sunlight/exposure, drives the two-step plan flow, and renders an interactive **location map** + USDA zone, the **reviewer agent critique** at the approval gate, the calendar, planting schedule, frost dates, watering advice, an estimated **harvest & grocery-savings** panel, a **pest & disease advisor**, a **follow-up chat** with the garden advisor, and a companion-planting **list/graph** view — with `.ics` / PDF export. |
 | [mcp-climate-server/](mcp-climate-server/) | Python · FastMCP | Geocoding (`get_coordinates` via Nominatim) and historical climate (`get_climate_data` via Open-Meteo) — 10-year averaged monthly profile, estimated USDA hardiness zone, and frost-date estimates. |
-| [mcp-botanical-server/](mcp-botanical-server/) | Python · FastMCP | Crop knowledge: `get_compatible_plants`, `get_crop_details`, `check_companion_planting`, backed by [db.json](mcp-botanical-server/db.json). Companion logic is shared with the backend via `compute_relationships`. |
+| [mcp-botanical-server/](mcp-botanical-server/) | Python · FastMCP | Crop knowledge for **78 plant varieties**: `get_compatible_plants`, `get_crop_details`, `check_companion_planting`, backed by [db.json](mcp-botanical-server/db.json). Companion logic is shared with the backend via `compute_relationships`. |
 
 ---
 
 ## How it works (two-step flow)
 
 1. **`POST /api/plan`** runs the pipeline **up to the HITL checkpoint** and returns
-   `status: "confirmation_required"` with the crops the agent proposes.
+   `status: "confirmation_required"` with the crops the agent proposes, together with an
+   independent **ReviewerAgent critique** (`review`: score, verdict, strengths, concerns,
+   suggestions) to inform the decision.
 2. The user **approves, edits, or rejects** the proposed selection in the UI.
 3. **`POST /api/plan/confirm`** resumes the *same* agent session with the human decision
    and returns the finalised plan (12-month calendar + planting schedule + companion
