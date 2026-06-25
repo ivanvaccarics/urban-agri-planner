@@ -36,6 +36,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 import agents
+import i18n
 from agents import (
     advisor_agent,
     build_chat_message,
@@ -119,6 +120,7 @@ class PlanRequest(BaseModel):
     exposure: str
     season: Optional[str] = None
     greenhouse: bool = False
+    lang: str = "en"
 
     @field_validator("exposure")
     @classmethod
@@ -136,6 +138,11 @@ class PlanRequest(BaseModel):
             raise ValueError(f"season must be one of {sorted(VALID_SEASONS)}")
         return value
 
+    @field_validator("lang")
+    @classmethod
+    def _validate_lang(cls, value: str) -> str:
+        return i18n.normalize_lang(value)
+
 
 class ConfirmRequest(BaseModel):
     sessionId: str
@@ -147,6 +154,12 @@ class ConfirmRequest(BaseModel):
 class ChatRequest(BaseModel):
     sessionId: str
     message: str = Field(min_length=1, max_length=1000)
+    lang: str = "en"
+
+    @field_validator("lang")
+    @classmethod
+    def _validate_lang(cls, value: str) -> str:
+        return i18n.normalize_lang(value)
 
 
 @asynccontextmanager
@@ -414,7 +427,7 @@ OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 
 async def _fetch_watering_advice(
-    latitude: Optional[float], longitude: Optional[float]
+    latitude: Optional[float], longitude: Optional[float], lang: str = "en"
 ) -> Optional[dict[str, Any]]:
     """Derive watering guidance from the next 7 days of forecast precipitation.
 
@@ -450,23 +463,17 @@ async def _fetch_watering_advice(
     avg_max = round(sum(tmax) / len(tmax), 1) if tmax else None
 
     if total_precip >= 15:
-        advice = "Skip watering for now — significant rain is expected over the next 7 days."
+        advice = i18n.tr(lang, "water.skip")
         level = "low"
     elif total_precip >= 5:
-        advice = (
-            "Light watering only — some rain is forecast this week. "
-            "Check soil moisture before watering."
-        )
+        advice = i18n.tr(lang, "water.light")
         level = "moderate"
     else:
-        advice = "Water regularly — little to no rain is forecast over the next 7 days."
+        advice = i18n.tr(lang, "water.regular")
         level = "high"
 
     if avg_max is not None and avg_max >= 28:
-        advice += (
-            " High temperatures expected, so water early morning or evening "
-            "to reduce evaporation."
-        )
+        advice += i18n.tr(lang, "water.heat")
 
     return {
         "advice": advice,
@@ -570,7 +577,8 @@ async def _run_reviewer(
     if not proposed_plants:
         return None
     review_session_id = f"review-{uuid4().hex}"
-    text = build_reviewer_message(proposed_plants, request_data, climate)
+    lang = request_data.get("lang", "en")
+    text = build_reviewer_message(proposed_plants, request_data, climate, lang)
     message = types.Content(role="user", parts=[types.Part(text=text)])
     review: Optional[dict[str, Any]] = None
     steps: list[dict[str, Any]] = []
@@ -628,6 +636,7 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
                     request.exposure,
                     season=request.season,
                     greenhouse=request.greenhouse,
+                    lang=request.lang,
                 )
             )
         ],
@@ -820,7 +829,9 @@ async def plan_chat(request: ChatRequest) -> dict[str, Any]:
             app_name=ADVISOR_APP_NAME, user_id=USER_ID, session_id=chat_session_id
         )
 
-    text = build_chat_message(plan, request_data, request.message, first_turn)
+    text = build_chat_message(
+        plan, request_data, request.message, first_turn, request.lang
+    )
     result = await _run_advisor(chat_session_id, text)
     return {
         "sessionId": request.sessionId,
@@ -848,6 +859,7 @@ async def _assemble_completed(
     request_data = captured.get("request", {}) or {}
     season = request_data.get("season")
     greenhouse = bool(request_data.get("greenhouse"))
+    lang = request_data.get("lang", "en")
     latitude = (climate.get("coordinates") or {}).get("latitude")
 
     monthly_profile = climate["monthlyProfile"]
@@ -858,27 +870,29 @@ async def _assemble_completed(
             season=season,
             greenhouse=greenhouse,
             latitude=latitude,
+            lang=lang,
         )
     else:
-        monthly_calendar = empty_calendar()
+        monthly_calendar = empty_calendar(lang)
 
     planting_schedule = build_planting_schedule(
-        selected, season=season, greenhouse=greenhouse, latitude=latitude
+        selected, season=season, greenhouse=greenhouse, latitude=latitude, lang=lang
     )
     companionship = compute_companionship(selected)
-    yield_estimate = compute_yield_estimate(selected)
+    yield_estimate = compute_yield_estimate(selected, lang=lang)
     pest_advisory = compute_pest_advisory(
         selected,
         monthly_profile=monthly_profile,
         season=season,
         greenhouse=greenhouse,
         latitude=latitude,
+        lang=lang,
     )
     proposed_ids = (captured.get("confirmation") or {}).get("proposedPlantIds", [])
     final_ids = [p["id"] for p in selected]
     coordinates = climate.get("coordinates") or {}
     watering_advice = await _fetch_watering_advice(
-        coordinates.get("latitude"), coordinates.get("longitude")
+        coordinates.get("latitude"), coordinates.get("longitude"), lang
     )
 
     result = {

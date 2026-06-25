@@ -33,6 +33,8 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 from mcp import StdioServerParameters
 
+import i18n
+
 MODEL = "gemma-4-26b-a4b-it"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -384,6 +386,7 @@ def build_reviewer_message(
     proposed_plants: list[dict[str, Any]],
     request_data: dict[str, Any],
     climate: dict[str, Any],
+    lang: str | None = None,
 ) -> str:
     """Render the proposal + context into the reviewer agent's input message.
 
@@ -417,7 +420,7 @@ def build_reviewer_message(
         "",
         "Verify companion compatibility with the tools, then submit your review.",
     ]
-    return "\n".join(lines)
+    return "\n".join(lines) + i18n.language_directive(lang)
 
 
 def build_advisor_context(
@@ -469,6 +472,7 @@ def build_chat_message(
     request_data: dict[str, Any] | None,
     user_message: str,
     include_context: bool,
+    lang: str | None = None,
 ) -> str:
     """Compose a chat turn, prefixing plan context only on the first turn.
 
@@ -477,14 +481,16 @@ def build_chat_message(
         request_data: The original plan request.
         user_message: The user's question.
         include_context: Whether to prepend the plan context (first turn only).
+        lang: Target language code for the advisor's reply.
 
     Returns:
         The text to send to the advisor agent for this turn.
     """
+    directive = i18n.language_directive(lang)
     if include_context:
         context = build_advisor_context(plan, request_data)
-        return f"{context}\n\nUSER QUESTION: {user_message}"
-    return user_message
+        return f"{context}\n\nUSER QUESTION: {user_message}{directive}"
+    return f"{user_message}{directive}"
 
 
 def build_initial_message(
@@ -493,6 +499,7 @@ def build_initial_message(
     exposure: str,
     season: str | None = None,
     greenhouse: bool = False,
+    lang: str | None = None,
 ) -> str:
     """Build the user message that seeds the agent pipeline."""
     setup = "in a greenhouse" if greenhouse else "outdoors (open air)"
@@ -508,7 +515,7 @@ def build_initial_message(
         lines.append(
             f"When choosing crops, prefer those whose sowing window falls in {season}."
         )
-    return "\n".join(lines)
+    return "\n".join(lines) + i18n.language_directive(lang)
 
 
 # --------------------------------------------------------------------------- #
@@ -521,6 +528,7 @@ def generate_calendar(
     season: str | None = None,
     greenhouse: bool = False,
     latitude: float | None = None,
+    lang: str | None = None,
 ) -> list[dict[str, Any]]:
     """Generate the personalised 12-month cultivation calendar.
 
@@ -542,6 +550,7 @@ def generate_calendar(
     monthly_calendar: list[dict[str, Any]] = []
     season_months = set(resolve_season_months(season, latitude))
     temp_buffer = GREENHOUSE_TEMP_BUFFER if greenhouse else 0
+    month_names = i18n.months(lang)
 
     for month_index, month_data in enumerate(monthly_profile):
         month_num = month_index + 1
@@ -556,7 +565,7 @@ def generate_calendar(
         if avg_max is None or avg_min is None:
             monthly_calendar.append(
                 {
-                    "month": MONTH_NAMES[month_index],
+                    "month": month_names[month_index],
                     "averageMaxTemp": avg_max,
                     "averageMinTemp": avg_min,
                     "totalPrecipitation": total_precip,
@@ -582,15 +591,13 @@ def generate_calendar(
 
             if is_sowing_month:
                 if temp_is_ok:
-                    sow_text = (
-                        f"Sow the {plant['name']} in a pot (min diameter "
-                        f"{plant['potSizeMin']} cm). This month's local climate "
-                        f"({avg_min}°C - {avg_max}°C) is ideal."
+                    sow_text = i18n.tr(
+                        lang, "cal.sow",
+                        plant=plant["name"], pot=plant["potSizeMin"],
+                        tmin=avg_min, tmax=avg_max,
                     )
                     if greenhouse_helped:
-                        sow_text += (
-                            " The greenhouse keeps it warm enough to sow this early."
-                        )
+                        sow_text += i18n.tr(lang, "cal.sow.gh")
                     actions.append(
                         {
                             "plant": plant["name"],
@@ -603,10 +610,9 @@ def generate_calendar(
                         {
                             "plant": plant["name"],
                             "type": "Protected Sowing",
-                            "text": (
-                                f"Start the {plant['name']} in a sheltered seed tray "
-                                f"indoors. Outdoors it is still too cold "
-                                f"({avg_min}°C, minimum required: {plant['tempMin']}°C)."
+                            "text": i18n.tr(
+                                lang, "cal.protectedSow",
+                                plant=plant["name"], tmin=avg_min, req=plant["tempMin"],
                             ),
                         }
                     )
@@ -629,11 +635,9 @@ def generate_calendar(
                         {
                             "plant": plant["name"],
                             "type": "Protection",
-                            "text": (
-                                f"Protect the {plant['name']}. Minimum temperatures "
-                                f"drop to {avg_min}°C (below its tolerance threshold "
-                                f"of {plant['tempMin']}°C). Move the pot indoors or "
-                                f"use a horticultural fleece cover."
+                            "text": i18n.tr(
+                                lang, "cal.protection",
+                                plant=plant["name"], tmin=avg_min, req=plant["tempMin"],
                             ),
                         }
                     )
@@ -642,11 +646,9 @@ def generate_calendar(
                         {
                             "plant": plant["name"],
                             "type": "Watering / Shading",
-                            "text": (
-                                f"Intense heat ({avg_max}°C). Water the "
-                                f"{plant['name']} generously during the cooler hours "
-                                f"(morning/evening) and consider shading it if it "
-                                f"shows signs of stress."
+                            "text": i18n.tr(
+                                lang, "cal.watering",
+                                tmax=avg_max, plant=plant["name"],
                             ),
                         }
                     )
@@ -655,10 +657,9 @@ def generate_calendar(
                         {
                             "plant": plant["name"],
                             "type": "Maintenance",
-                            "text": (
-                                f"Active growth for the {plant['name']}. Water "
-                                f"regularly (needs: {plant['watering']}) and remove "
-                                f"any weeds."
+                            "text": i18n.tr(
+                                lang, "cal.maintenance",
+                                plant=plant["name"], watering=plant["watering"],
                             ),
                         }
                     )
@@ -669,17 +670,13 @@ def generate_calendar(
                         {
                             "plant": plant["name"],
                             "type": "Harvest",
-                            "text": (
-                                f"Harvest time for the {plant['name']}! Pick the "
-                                f"leaves or fruit regularly to encourage the plant "
-                                f"to keep producing."
-                            ),
+                            "text": i18n.tr(lang, "cal.harvest", plant=plant["name"]),
                         }
                     )
 
         monthly_calendar.append(
             {
-                "month": MONTH_NAMES[month_index],
+                "month": month_names[month_index],
                 "averageMaxTemp": avg_max,
                 "averageMinTemp": avg_min,
                 "totalPrecipitation": total_precip,
@@ -691,12 +688,12 @@ def generate_calendar(
     return monthly_calendar
 
 
-def empty_calendar() -> list[dict[str, Any]]:
+def empty_calendar(lang: str | None = None) -> list[dict[str, Any]]:
     """Return a 12-month calendar with no actions (used when no plants apply)."""
-    return [{"month": name, "actions": [], "inSeason": False} for name in MONTH_NAMES]
+    return [{"month": name, "actions": [], "inSeason": False} for name in i18n.months(lang)]
 
 
-def _format_month_range(months: list[int]) -> str:
+def _format_month_range(months: list[int], lang: str | None = None) -> str:
     """Format month numbers into compact ranges (e.g. ``[3, 4, 5] -> "Mar-May"``).
 
     Consecutive months collapse into a range, and a December->January wrap is
@@ -705,6 +702,8 @@ def _format_month_range(months: list[int]) -> str:
     unique = sorted({m for m in (months or []) if 1 <= m <= 12})
     if not unique:
         return "—"
+
+    month_abbr = i18n.month_abbr(lang)
 
     groups: list[list[int]] = []
     for month in unique:
@@ -721,9 +720,9 @@ def _format_month_range(months: list[int]) -> str:
     for group in groups:
         start, end = group[0], group[-1]
         parts.append(
-            MONTH_ABBR[start - 1]
+            month_abbr[start - 1]
             if start == end
-            else f"{MONTH_ABBR[start - 1]}–{MONTH_ABBR[end - 1]}"
+            else f"{month_abbr[start - 1]}–{month_abbr[end - 1]}"
         )
     return ", ".join(parts)
 
@@ -733,6 +732,7 @@ def build_planting_schedule(
     season: str | None = None,
     greenhouse: bool = False,
     latitude: float | None = None,
+    lang: str | None = None,
 ) -> list[dict[str, Any]]:
     """Summarise, per crop, when to put it in the field and when to harvest.
 
@@ -759,18 +759,15 @@ def build_planting_schedule(
         entry: dict[str, Any] = {
             "plant": plant["name"],
             "scientificName": plant.get("scientificName"),
-            "putInField": _format_month_range(sowing),
-            "harvest": _format_month_range(harvest),
+            "putInField": _format_month_range(sowing, lang),
+            "harvest": _format_month_range(harvest, lang),
             "putInFieldMonths": sorted(set(sowing)),
             "harvestMonths": sorted(set(harvest)),
             "inSeason": in_season,
             "potSizeMin": plant.get("potSizeMin"),
         }
         if greenhouse:
-            entry["note"] = (
-                "Greenhouse: you can usually sow a few weeks earlier and "
-                "harvest later than the outdoor window shown."
-            )
+            entry["note"] = i18n.tr(lang, "sched.ghNote")
         schedule.append(entry)
 
     return schedule
@@ -779,6 +776,7 @@ def build_planting_schedule(
 def compute_yield_estimate(
     selected_plants: list[dict[str, Any]],
     plants_per_crop: int = 1,
+    lang: str | None = None,
 ) -> dict[str, Any]:
     """Estimate the seasonal harvest and grocery-cost saving of a crop set.
 
@@ -828,11 +826,7 @@ def compute_yield_estimate(
         "totalValueEur": round(total_value, 2),
         "currency": "EUR",
         "plantsPerCrop": plants_per_crop,
-        "assumption": (
-            f"Estimates assume {plants_per_crop} plant(s) per crop over a full "
-            "growing season. Actual yields vary with care, variety, pot size and "
-            "weather. Ornamental/companion plants contribute no grocery value."
-        ),
+        "assumption": i18n.tr(lang, "yield.assumption", n=plants_per_crop),
     }
 
 
@@ -842,6 +836,7 @@ def compute_pest_advisory(
     season: str | None = None,
     greenhouse: bool = False,
     latitude: float | None = None,
+    lang: str | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic pest & disease advisory for the selected crops.
 
@@ -909,37 +904,16 @@ def compute_pest_advisory(
             warm = avg_max >= 24
             wet = avg_precip >= 60
             if warm and wet:
-                climate_note = (
-                    "Warm and humid in-season conditions strongly favour fungal "
-                    "diseases (blight, powdery mildew) and rapid pest build-up. "
-                    "Prioritise airflow, water at the base, and inspect weekly."
-                )
+                climate_note = i18n.tr(lang, "pest.warmWet")
             elif warm:
-                climate_note = (
-                    "Warm in-season temperatures speed up pest reproduction "
-                    "(aphids, spider mites). Inspect undersides of leaves weekly "
-                    "and act early."
-                )
+                climate_note = i18n.tr(lang, "pest.warm")
             elif wet:
-                climate_note = (
-                    "Wet in-season conditions raise fungal-disease risk. Improve "
-                    "airflow, avoid wetting foliage, and remove infected leaves "
-                    "promptly."
-                )
+                climate_note = i18n.tr(lang, "pest.wet")
     if greenhouse:
-        gh_note = (
-            "Under greenhouse cover, ventilate daily to curb humidity-driven "
-            "diseases and watch for whitefly and spider mites, which thrive in "
-            "still, warm air."
-        )
+        gh_note = i18n.tr(lang, "pest.gh")
         climate_note = f"{climate_note} {gh_note}" if climate_note else gh_note
 
-    tips = [
-        "Inspect plants weekly and act on the first signs — early action is far easier.",
-        "Encourage beneficial insects (ladybugs, lacewings) instead of broad-spectrum sprays.",
-        "Water at the base and keep foliage dry to limit fungal disease.",
-        "Rotate crop families each year to break pest and disease cycles.",
-    ]
+    tips = i18n.tips(lang)
 
     return {
         "risks": risks,

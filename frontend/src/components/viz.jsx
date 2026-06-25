@@ -115,7 +115,10 @@ export function CompanionGraph({ selectedPlants, companionship }) {
 // the kinds of work it holds (sow / harvest / care); the current month is
 // marked; clicking a month reveals its full action list below.
 // ---------------------------------------------------------------------------
-const MONTH_ORDER = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_ABBR = {
+  en: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+  it: ["Gen","Feb","Mar","Apr","Mag","Giu","Lug","Ago","Set","Ott","Nov","Dic"],
+};
 
 function actionCategory(type) {
   const t = (type || "").toLowerCase();
@@ -125,23 +128,19 @@ function actionCategory(type) {
 }
 
 export function YearRibbon({ monthlyCalendar }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const monthOrder = MONTH_ABBR[lang] || MONTH_ABBR.en;
   const catLabel = { sow: t("ribbon.sow"), harvest: t("ribbon.harvest"), care: t("ribbon.care") };
   const months = monthlyCalendar || [];
-  const byMonth = {};
-  months.forEach((m) => {
-    const key = String(m.month || "").slice(0, 3);
-    byMonth[key] = m;
-  });
 
   const currentIdx = new Date().getMonth();
 
-  // Default selection: current month if it has actions, else first month with actions.
+  // The calendar is always 12 ordered entries, so index by position rather than
+  // by name — that stays correct regardless of the language month names use.
   const firstActive = months.findIndex((m) => (m.actions || []).length > 0);
-  const currentKey = MONTH_ORDER[currentIdx];
   const defaultIdx =
-    (byMonth[currentKey]?.actions?.length ?? 0) > 0
-      ? MONTH_ORDER.indexOf(currentKey)
+    (months[currentIdx]?.actions?.length ?? 0) > 0
+      ? currentIdx
       : firstActive >= 0
       ? firstActive
       : 0;
@@ -152,8 +151,8 @@ export function YearRibbon({ monthlyCalendar }) {
   return (
     <div className="ribbon">
       <div className="ribbon__track" role="tablist" aria-label="Year at a glance">
-        {MONTH_ORDER.map((abbr, idx) => {
-          const data = byMonth[abbr] || months[idx];
+        {monthOrder.map((abbr, idx) => {
+          const data = months[idx];
           const actions = data?.actions || [];
           const cats = new Set(actions.map((a) => actionCategory(a.type)));
           const isCurrent = idx === currentIdx;

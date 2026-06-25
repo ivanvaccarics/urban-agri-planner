@@ -179,7 +179,7 @@ function App() {
       const response = await fetch(`${API_BASE}/api/plan/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: planResult.sessionId, message: question }),
+        body: JSON.stringify({ sessionId: planResult.sessionId, message: question, lang }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || t("ask.error"));
@@ -241,6 +241,7 @@ function App() {
           exposure,
           season,
           greenhouse,
+          lang,
         }),
       });
       const data = await response.json();
