@@ -773,6 +773,56 @@ select.input-field {
 
 .checkpoint-hint { font-size: 0.86rem; color: var(--text-muted); margin-bottom: 16px; }
 
+/* Reviewer / critic agent critique */
+.review-card {
+  margin: 18px 0 4px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.review-header { display: flex; align-items: center; gap: 12px; }
+.review-icon { color: var(--accent, #7bd88f); font-size: 1.4rem; }
+.review-heading { flex: 1; }
+.review-heading h2, .review-heading h3 { margin: 0; font-family: var(--font-display); font-size: 1rem; }
+.review-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.review-score {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.review-score-max { font-size: 0.7rem; opacity: 0.7; margin-left: 1px; }
+.review-score.good { color: #7bd88f; background: rgba(123, 216, 143, 0.12); }
+.review-score.fair { color: #f5c451; background: rgba(245, 196, 81, 0.12); }
+.review-score.poor { color: #f08a8a; background: rgba(240, 138, 138, 0.12); }
+.review-verdict { margin: 12px 0; font-style: italic; color: var(--text-main); }
+.review-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.review-col-title {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.review-col-title.is-strength { color: #7bd88f; }
+.review-col-title.is-concern { color: #f08a8a; }
+.review-col-title.is-suggestion { color: #66b8ff; }
+.review-col ul { margin: 0; padding-left: 18px; }
+.review-col li { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 4px; }
+
 /* AI proposal badge */
 .crop-card .proposed-badge {
   position: absolute;

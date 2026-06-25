@@ -889,6 +889,67 @@ function App() {
             <p className="narrative-comment">“{pendingConfirmation.rationale}”</p>
           )}
 
+          {pendingConfirmation.review && (
+            <div className="review-card">
+              <div className="review-header">
+                <span className="material-symbols review-icon">rate_review</span>
+                <div className="review-heading">
+                  <h3>Reviewer agent — independent critique</h3>
+                  <span className="review-tag">Second opinion before approval</span>
+                </div>
+                {typeof pendingConfirmation.review.score === "number" && (
+                  <div
+                    className={`review-score ${
+                      pendingConfirmation.review.score >= 75
+                        ? "good"
+                        : pendingConfirmation.review.score >= 50
+                        ? "fair"
+                        : "poor"
+                    }`}
+                  >
+                    {pendingConfirmation.review.score}
+                    <span className="review-score-max">/100</span>
+                  </div>
+                )}
+              </div>
+              {pendingConfirmation.review.verdict && (
+                <p className="review-verdict">“{pendingConfirmation.review.verdict}”</p>
+              )}
+              <div className="review-columns">
+                {(pendingConfirmation.review.strengths || []).length > 0 && (
+                  <div className="review-col">
+                    <h4 className="review-col-title is-strength">Strengths</h4>
+                    <ul>
+                      {pendingConfirmation.review.strengths.map((s, i) => (
+                        <li key={`str-${i}`}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(pendingConfirmation.review.concerns || []).length > 0 && (
+                  <div className="review-col">
+                    <h4 className="review-col-title is-concern">Concerns</h4>
+                    <ul>
+                      {pendingConfirmation.review.concerns.map((c, i) => (
+                        <li key={`con-${i}`}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(pendingConfirmation.review.suggestions || []).length > 0 && (
+                  <div className="review-col">
+                    <h4 className="review-col-title is-suggestion">Suggestions</h4>
+                    <ul>
+                      {pendingConfirmation.review.suggestions.map((s, i) => (
+                        <li key={`sug-${i}`}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <h3 className="checkpoint-subtitle">Selection proposed by the agent</h3>
           <p className="checkpoint-hint">
             Confirm, add or remove crops before generating the final plan.

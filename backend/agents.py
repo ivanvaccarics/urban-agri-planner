@@ -299,6 +299,127 @@ AdvisorAgent = LlmAgent(
 advisor_agent = AdvisorAgent
 
 
+# --------------------------------------------------------------------------- #
+# Reviewer / critic agent — scores the Planner's proposed selection *before*
+# the human approves it at the HITL checkpoint. It submits its verdict through a
+# structured `submit_review` tool (mirrors the finalize pattern) so the backend
+# can read a clean, typed result instead of parsing free text.
+# --------------------------------------------------------------------------- #
+def submit_review(
+    score: int,
+    verdict: str,
+    strengths: list[str],
+    concerns: list[str],
+    suggestions: list[str],
+) -> dict[str, Any]:
+    """Record the reviewer agent's structured critique of the proposed crops.
+
+    Args:
+        score: Overall quality of the selection, 0-100.
+        verdict: One-line summary judgement.
+        strengths: What is good about the selection.
+        concerns: Risks or weaknesses (e.g. antagonist pairs, low diversity).
+        suggestions: Concrete, optional improvements.
+
+    Returns:
+        The critique as a structured dict (echoed back for capture).
+    """
+    return {
+        "score": score,
+        "verdict": verdict,
+        "strengths": list(strengths or []),
+        "concerns": list(concerns or []),
+        "suggestions": list(suggestions or []),
+    }
+
+
+review_tool = FunctionTool(submit_review)
+
+REVIEWER_TOOLS = ["check_companion_planting", "get_crop_details"]
+
+reviewer_botanical_toolset = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command=sys.executable,
+            args=[BOTANICAL_SERVER_PATH],
+        ),
+        timeout=30.0,
+    ),
+    tool_filter=REVIEWER_TOOLS,
+)
+
+ReviewerAgent = LlmAgent(
+    name="ReviewerAgent",
+    model=MODEL,
+    description="Critiques the proposed crop selection before human approval.",
+    instruction=(
+        "You are the **Reviewer** agent of an urban-gardening planning system — an "
+        "independent second opinion. The Planner has proposed a crop selection for "
+        "a balcony/terrace. Your job is to critically evaluate that proposal BEFORE "
+        "a human approves it, so the human can decide with an expert assessment.\n\n"
+        "The user message contains the location, climate (USDA hardiness zone), "
+        "target season, available sunlight, exposure, and the proposed crops with "
+        "their key attributes.\n\n"
+        "Do the following:\n"
+        "1. Call `check_companion_planting` with the proposed plant `id`s to verify "
+        "beneficial and antagonistic pairings.\n"
+        "2. If useful, call `get_crop_details` to confirm a specific crop's needs.\n"
+        "3. Evaluate the selection on: climate/season fit, sunlight/exposure match, "
+        "companion compatibility (penalise antagonist pairs), diversity, difficulty "
+        "balance, and suitability for limited balcony space.\n"
+        "4. Call `submit_review` EXACTLY ONCE with an integer `score` (0-100), a "
+        "one-line `verdict`, and short `strengths`, `concerns` and `suggestions` "
+        "lists. Be concrete and base every point on the data — never invent facts.\n\n"
+        "Call `submit_review` as your final action."
+    ),
+    tools=[reviewer_botanical_toolset, review_tool],
+    generate_content_config=_DETERMINISTIC_CONFIG,
+)
+
+reviewer_agent = ReviewerAgent
+REVIEW_TOOL_NAME = "submit_review"
+
+
+def build_reviewer_message(
+    proposed_plants: list[dict[str, Any]],
+    request_data: dict[str, Any],
+    climate: dict[str, Any],
+) -> str:
+    """Render the proposal + context into the reviewer agent's input message.
+
+    Args:
+        proposed_plants: Full records of the crops the Planner proposed.
+        request_data: The original plan request (sunlight, exposure, season).
+        climate: The climate summary (location, hardiness zone).
+
+    Returns:
+        A plain-text prompt for the reviewer to evaluate.
+    """
+    lines = [
+        "Evaluate this proposed crop selection for an urban balcony/terrace.",
+        "",
+        f"- Location: {climate.get('location') or 'unknown'}",
+        f"- USDA hardiness zone: {climate.get('estimatedHardinessZone') or 'unknown'}",
+        f"- Target season: {request_data.get('season') or 'not specified'}",
+        f"- Setup: {'greenhouse' if request_data.get('greenhouse') else 'outdoor'}",
+        f"- Available sunlight: {request_data.get('sunlightHours', 'unknown')} h/day",
+        f"- Exposure: {request_data.get('exposure', 'unknown')}",
+        "",
+        "Proposed crops:",
+    ]
+    for p in proposed_plants:
+        lines.append(
+            f"- {p['name']} (id: {p['id']}): needs ≥{p.get('sunlightHoursMin', '?')}h sun, "
+            f"difficulty {p.get('difficulty', '?')}, watering {p.get('watering', '?')}, "
+            f"companions {p.get('companions', [])}, antagonists {p.get('antagonists', [])}."
+        )
+    lines += [
+        "",
+        "Verify companion compatibility with the tools, then submit your review.",
+    ]
+    return "\n".join(lines)
+
+
 def build_advisor_context(
     plan: dict[str, Any], request_data: dict[str, Any] | None = None
 ) -> str:

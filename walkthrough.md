@@ -65,6 +65,11 @@ The backend defines a `SequentialAgent` pipeline called **`CropPlanningPipeline`
 The two agents run in sequence under the same ADK `Runner`; shared state flows through the
 `output_key` values stored in the session.
 
+Two further `LlmAgent` instances run on their own dedicated `Runner`s outside the sequential
+pipeline: the **`ReviewerAgent`** (an independent critic that scores the Planner's proposal at
+the HITL checkpoint via a structured `submit_review` tool) and the **`AdvisorAgent`** (the
+post-plan follow-up chat). Both reuse the botanical MCP toolset.
+
 ### Pillar 2 — Model Context Protocol (MCP)
 
 Both servers are written in Python with **FastMCP** and communicate over `stdio`; the ADK
@@ -151,9 +156,13 @@ The assembled plan and the API around it add several production-minded touches:
 
 **`POST /api/plan`** — body: `{ address, sunlightHours, exposure, season?, greenhouse? }`.
 `confirmation_required` response: `sessionId`, `functionCallId`, `proposedPlantIds`,
-`proposedPlants`, `rationale`, `compatiblePlants`, `location`, `coordinates`,
+`proposedPlants`, `rationale`, `review`, `compatiblePlants`, `location`, `coordinates`,
 `estimatedHardinessZone`, `absoluteMinTempYear`, `frostDates`, `climateYears`,
-`coordinatorComment`, `steps`, `checkpoint`.
+`coordinatorComment`, `steps`, `checkpoint`. The `review` block is an independent critique
+produced by a dedicated `ReviewerAgent` (its own ADK `Runner` + botanical MCP toolset) that
+scores the Planner's proposal **before** the human approves it: `{ score (0-100), verdict,
+strengths[], concerns[], suggestions[], steps }`. It is best-effort — a reviewer failure
+returns `null` and never blocks the checkpoint.
 
 **`POST /api/plan/confirm`** — body: `{ sessionId, functionCallId, approved, plantIds? }`.
 `completed` response: the full plan (`monthlyCalendar`, `plantingSchedule`, `companionship`,

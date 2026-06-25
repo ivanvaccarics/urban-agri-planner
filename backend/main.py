@@ -41,11 +41,13 @@ from agents import (
     build_chat_message,
     build_initial_message,
     build_planting_schedule,
+    build_reviewer_message,
     compute_companionship,
     compute_pest_advisory,
     compute_yield_estimate,
     empty_calendar,
     generate_calendar,
+    reviewer_agent,
     root_agent,
 )
 
@@ -54,6 +56,7 @@ logger = logging.getLogger("backend-orchestrator")
 
 APP_NAME = "urban-agri-planner"
 ADVISOR_APP_NAME = "urban-agri-planner-advisor"
+REVIEWER_APP_NAME = "urban-agri-planner-reviewer"
 USER_ID = "local-user"
 CONFIRMATION_FC_NAME = "adk_request_confirmation"
 
@@ -165,6 +168,13 @@ async def lifespan(app: FastAPI):
     advisor_app = App(name=ADVISOR_APP_NAME, root_agent=advisor_agent)
     app.state.advisor_runner = Runner(
         app=advisor_app,
+        session_service=app.state.session_service,
+    )
+    # Separate runner for the reviewer/critic agent that scores the proposed
+    # selection at the HITL checkpoint.
+    reviewer_app = App(name=REVIEWER_APP_NAME, root_agent=reviewer_agent)
+    app.state.reviewer_runner = Runner(
+        app=reviewer_app,
         session_service=app.state.session_service,
     )
     # Per-session capture store: session_id -> captured data, bounded by TTL/size.
@@ -547,6 +557,57 @@ async def address_suggestions(q: str = "") -> dict[str, Any]:
     return {"suggestions": suggestions}
 
 
+async def _run_reviewer(
+    proposed_plants: list[dict[str, Any]],
+    request_data: dict[str, Any],
+    climate: dict[str, Any],
+) -> Optional[dict[str, Any]]:
+    """Run the reviewer agent on the proposed selection; return its critique.
+
+    Best-effort: any failure (model error, missing key) is logged and returns
+    ``None`` so the human-in-the-loop checkpoint still works without a review.
+    """
+    if not proposed_plants:
+        return None
+    review_session_id = f"review-{uuid4().hex}"
+    text = build_reviewer_message(proposed_plants, request_data, climate)
+    message = types.Content(role="user", parts=[types.Part(text=text)])
+    review: Optional[dict[str, Any]] = None
+    steps: list[dict[str, Any]] = []
+    try:
+        await app.state.session_service.create_session(
+            app_name=REVIEWER_APP_NAME, user_id=USER_ID, session_id=review_session_id
+        )
+        async for event in app.state.reviewer_runner.run_async(
+            user_id=USER_ID, session_id=review_session_id, new_message=message
+        ):
+            for part in (event.content.parts if event.content else []) or []:
+                fc = getattr(part, "function_call", None)
+                if fc is not None:
+                    steps.append({"type": "tool_call", "tool": fc.name})
+                    if fc.name == agents.REVIEW_TOOL_NAME:
+                        review = dict(fc.args or {})
+    except Exception:  # noqa: BLE001
+        logger.exception("Reviewer run failed (non-fatal):")
+        return None
+
+    if not review:
+        return None
+    try:
+        score = int(review.get("score"))
+    except (TypeError, ValueError):
+        score = None
+    return {
+        "score": max(0, min(100, score)) if score is not None else None,
+        "verdict": review.get("verdict") or "",
+        "strengths": list(review.get("strengths") or []),
+        "concerns": list(review.get("concerns") or []),
+        "suggestions": list(review.get("suggestions") or []),
+        "steps": steps,
+        "agent": "ReviewerAgent",
+    }
+
+
 @app.post("/api/plan")
 async def create_plan(request: PlanRequest) -> dict[str, Any]:
     """Run the pipeline up to the human-in-the-loop checkpoint."""
@@ -599,6 +660,8 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
     proposed_ids = confirmation["proposedPlantIds"]
     proposed_plants = [p for p in compatible if p["id"] in proposed_ids]
 
+    review = await _run_reviewer(proposed_plants, captured.get("request", {}), climate)
+
     return {
         "status": "confirmation_required",
         "sessionId": session_id,
@@ -606,6 +669,7 @@ async def create_plan(request: PlanRequest) -> dict[str, Any]:
         "proposedPlantIds": proposed_ids,
         "proposedPlants": proposed_plants,
         "rationale": confirmation.get("rationale"),
+        "review": review,
         "compatiblePlants": compatible,
         "location": climate["location"],
         "coordinates": climate["coordinates"],

@@ -80,6 +80,21 @@ class ScriptedModel(BaseLlm):
 
     @staticmethod
     def _decide(tools: set[str], done: set[str]) -> types.Content:
+        # ReviewerAgent: has submit_review. Verify companions, then submit.
+        if "submit_review" in tools:
+            if "check_companion_planting" not in done:
+                return _fc("check_companion_planting", plantIds=list(PROPOSED_IDS))
+            if "submit_review" not in done:
+                return _fc(
+                    "submit_review",
+                    score=82,
+                    verdict="Solid, climate-appropriate companion selection.",
+                    strengths=["Tomato and basil are strong companions", "Good climate fit"],
+                    concerns=["Limited leafy-green diversity"],
+                    suggestions=["Consider adding lettuce for a quicker harvest"],
+                )
+            return _txt("Review complete.")
+
         # AdvisorAgent (follow-up chat): has get_crop_details but no finalize tool.
         # Re-validate one crop via a tool, then answer in text.
         if "get_crop_details" in tools and "finalize_plant_selection" not in tools:
@@ -129,6 +144,7 @@ def _install_scripted_model() -> None:
     agents.GeoClimateAgent.model = model
     agents.PlannerAgent.model = model
     agents.AdvisorAgent.model = model
+    agents.ReviewerAgent.model = model
 
 
 # --------------------------------------------------------------------------- #
@@ -186,6 +202,13 @@ def _start_plan(client) -> dict:
         "missing estimatedHardinessZone",
     )
     _check(bool(data.get("checkpoint")), "missing security checkpoint block")
+    review = data.get("review")
+    _check(review is not None, "missing reviewer critique at checkpoint")
+    _check(
+        isinstance(review.get("score"), int) and 0 <= review["score"] <= 100,
+        f"reviewer score should be an int 0-100, got {review.get('score')}",
+    )
+    _check(bool(review.get("verdict")), "reviewer verdict should not be empty")
     return data
 
 
