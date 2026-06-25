@@ -184,18 +184,25 @@ app = FastAPI(title="Urban Agri-Planner Orchestrator", lifespan=lifespan)
 # CORS: restrict to known frontend origins. Override via the ALLOWED_ORIGINS
 # env var (comma-separated). A wildcard with credentials is invalid and unsafe,
 # so credentials stay disabled (the API is stateless and token-free).
+#
+# In addition to the explicit list, any localhost/127.0.0.1 origin on *any* port
+# is allowed via a regex, so the app keeps working when Vite falls back to a
+# different dev port (5174, 5175, …) because 5173 is already in use. This regex
+# only matches loopback hosts, so it does not loosen anything for production.
 _DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")
     if origin.strip()
 ]
+LOCALHOST_ORIGIN_REGEX = r"^http://(localhost|127\.0\.0\.1):\d+$"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=LOCALHOST_ORIGIN_REGEX,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 

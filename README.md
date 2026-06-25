@@ -94,7 +94,9 @@ automatically as `stdio` subprocesses when needed.
 
 > **Configuration:** the backend reads `ALLOWED_ORIGINS` (CORS allow-list) and
 > `GOOGLE_API_KEY` from `backend/.env`; the frontend reads `VITE_API_BASE` from
-> `frontend/.env`.
+> `frontend/.env`. For local development, any `localhost`/`127.0.0.1` origin (on
+> any port) is always allowed, so it keeps working if Vite falls back to a
+> different dev port (5174, 5175, …) when 5173 is busy.
 
 ---
 
