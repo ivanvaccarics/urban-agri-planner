@@ -1196,6 +1196,197 @@ select.input-field {
   color: var(--text-muted);
 }
 
+/* ── Harvest & savings estimate ────────────────── */
+.yield-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.yield-total-card {
+  flex: 1 1 180px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-inset);
+}
+
+.yt-icon { font-size: 30px; }
+
+.yt-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.35rem;
+  color: var(--text-main);
+}
+
+.yt-label {
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.yield-list { display: flex; flex-direction: column; gap: 6px; }
+
+.yield-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-inset);
+}
+
+.yield-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--text-main);
+}
+
+.yield-meta {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--text-main);
+}
+
+.yield-assumption {
+  margin-top: 12px;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Location map (OSM embed) ──────────────────── */
+.location-map {
+  margin: 14px 0 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-inset);
+}
+
+.location-map-frame {
+  display: block;
+  width: 100%;
+  height: 220px;
+  border: 0;
+}
+
+.location-map-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+}
+
+.location-map-meta a { color: var(--new-leaf); text-decoration: none; }
+.location-map-meta a:hover { text-decoration: underline; }
+
+/* ── Pest & disease advisor ────────────────────── */
+.pest-climate-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(176, 106, 22, 0.30);
+  background: rgba(176, 106, 22, 0.08);
+}
+
+.pest-climate-note .material-symbols { color: #b06a16; }
+.pest-climate-note p { margin: 0; font-size: 0.86rem; color: var(--text-main); }
+
+.pest-list { display: flex; flex-direction: column; gap: 14px; }
+
+.pest-crop {
+  padding: 12px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-inset);
+}
+
+.pest-crop-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: italic;
+  font-size: 1.02rem;
+  color: var(--text-main);
+  margin-bottom: 10px;
+}
+
+.pest-issue {
+  padding: 8px 0;
+  border-top: 1px dashed var(--border-color);
+}
+.pest-issue:first-of-type { border-top: none; padding-top: 0; }
+
+.pest-issue-head { display: flex; align-items: center; gap: 8px; }
+
+.pest-tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+.pest-tag.pest { color: #b06a16; background: rgba(176,106,22,0.12); border: 1px solid rgba(176,106,22,0.30); }
+.pest-tag.disease { color: #c0392b; background: rgba(192,57,43,0.10); border: 1px solid rgba(192,57,43,0.28); }
+
+.pest-issue-name { font-weight: 600; color: var(--text-main); font-size: 0.92rem; }
+
+.pest-remedy {
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.pest-allies { margin-top: 6px; font-size: 0.80rem; color: var(--text-main); }
+
+.pest-ally-chip {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 2px;
+  color: var(--new-leaf);
+  background: rgba(92, 140, 82, 0.11);
+  border: 1px solid rgba(92, 140, 82, 0.28);
+}
+
+.pest-allies-summary {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 0.84rem;
+  color: var(--text-main);
+  background: rgba(92, 140, 82, 0.07);
+  border: 1px solid rgba(92, 140, 82, 0.22);
+}
+
+.pest-tips {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.pest-tips li { margin-bottom: 4px; }
+
 /* ── In-season calendar highlight ──────────────── */
 .month-row.in-season {
   border-left: 3px solid var(--new-leaf);

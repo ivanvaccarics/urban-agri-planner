@@ -43,7 +43,7 @@ The model powering both `LlmAgent` instances is **`gemma-4-26b-a4b-it`**.
 | Component | Tech | Purpose |
 | --- | --- | --- |
 | [backend/](backend/) | Python · Google ADK · FastAPI | Multi-agent orchestrator. Runs the `CropPlanningPipeline` (`GeoClimateAgent` → `PlannerAgent`), connects to the MCP servers, and exposes the REST API on port `5001`. Enforces the HITL checkpoint, validates inputs, rate-limits the geocoding proxy, and keeps a bounded session store. |
-| [frontend/](frontend/) | Vite · React | Single-page dashboard. Collects address/sunlight/exposure, drives the two-step plan flow, and renders the calendar, planting schedule, frost dates, watering advice, and a companion-planting **list/graph** view — with `.ics` / PDF export. |
+| [frontend/](frontend/) | Vite · React | Single-page dashboard. Collects address/sunlight/exposure, drives the two-step plan flow, and renders an interactive **location map** + USDA zone, the calendar, planting schedule, frost dates, watering advice, an estimated **harvest & grocery-savings** panel, a **pest & disease advisor**, and a companion-planting **list/graph** view — with `.ics` / PDF export. |
 | [mcp-climate-server/](mcp-climate-server/) | Python · FastMCP | Geocoding (`get_coordinates` via Nominatim) and historical climate (`get_climate_data` via Open-Meteo) — 10-year averaged monthly profile, estimated USDA hardiness zone, and frost-date estimates. |
 | [mcp-botanical-server/](mcp-botanical-server/) | Python · FastMCP | Crop knowledge: `get_compatible_plants`, `get_crop_details`, `check_companion_planting`, backed by [db.json](mcp-botanical-server/db.json). Companion logic is shared with the backend via `compute_relationships`. |
 
@@ -56,8 +56,8 @@ The model powering both `LlmAgent` instances is **`gemma-4-26b-a4b-it`**.
 2. The user **approves, edits, or rejects** the proposed selection in the UI.
 3. **`POST /api/plan/confirm`** resumes the *same* agent session with the human decision
    and returns the finalised plan (12-month calendar + planting schedule + companion
-   analysis + frost dates + 7-day watering advice) plus a `security` block recording
-   the human approval.
+   analysis + frost dates + 7-day watering advice + estimated harvest & grocery savings)
+   plus a `security` block recording the human approval.
 
 No plan is ever finalised without explicit human approval. Seasons are flipped
 automatically for Southern-Hemisphere locations based on the geocoded latitude.

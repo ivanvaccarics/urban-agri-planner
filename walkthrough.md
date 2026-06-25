@@ -157,7 +157,7 @@ The assembled plan and the API around it add several production-minded touches:
 
 **`POST /api/plan/confirm`** — body: `{ sessionId, functionCallId, approved, plantIds? }`.
 `completed` response: the full plan (`monthlyCalendar`, `plantingSchedule`, `companionship`,
-`selectedPlants`, `frostDates`, `climateYears`, `wateringAdvice`, `steps`) plus the
+`yieldEstimate`, `pestAdvisory`, `selectedPlants`, `frostDates`, `climateYears`, `wateringAdvice`, `steps`) plus the
 `security` block (`humanApproved`, `adjusted`, `checkpointSkipped`, `mechanism`,
 `proposedPlantIds`, `finalPlantIds`).
 

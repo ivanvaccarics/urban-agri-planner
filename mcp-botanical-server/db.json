@@ -8,13 +8,47 @@
     "difficulty": "Medium",
     "tempMin": 15,
     "tempMax": 35,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "High",
     "potSizeMin": 30,
-    "companions": ["Basil", "Lettuce", "Parsley"],
-    "antagonists": ["Zucchini"],
-    "description": "Needs plenty of sun and warmth. Excellent grown in deep pots on a balcony."
+    "companions": [
+      "Basil",
+      "Lettuce",
+      "Parsley"
+    ],
+    "antagonists": [
+      "Zucchini"
+    ],
+    "description": "Needs plenty of sun and warmth. Excellent grown in deep pots on a balcony.",
+    "yieldKgPerPlant": 4.0,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Spray with insecticidal soap or a strong water jet; encourage ladybugs."
+      },
+      {
+        "name": "Tomato hornworm",
+        "type": "pest",
+        "remedy": "Hand-pick at dusk; grow borage or dill nearby."
+      },
+      {
+        "name": "Late blight",
+        "type": "disease",
+        "remedy": "Avoid wetting foliage, space for airflow, remove infected leaves promptly."
+      }
+    ]
   },
   {
     "id": "lettuce",
@@ -25,13 +59,48 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 24,
-    "sowingMonths": [2, 3, 4, 9, 10],
-    "harvestMonths": [4, 5, 6, 11, 12],
+    "sowingMonths": [
+      2,
+      3,
+      4,
+      9,
+      10
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      6,
+      11,
+      12
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Tomato", "Radish", "Strawberry"],
+    "companions": [
+      "Tomato",
+      "Radish",
+      "Strawberry"
+    ],
     "antagonists": [],
-    "description": "Grows well even in partial shade and avoids the scorching summer sun that would make it bolt early."
+    "description": "Grows well even in partial shade and avoids the scorching summer sun that would make it bolt early.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 2.5,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Rinse off with water; use insecticidal soap."
+      },
+      {
+        "name": "Slugs & snails",
+        "type": "pest",
+        "remedy": "Beer traps, copper tape, hand-pick at night."
+      },
+      {
+        "name": "Downy mildew",
+        "type": "disease",
+        "remedy": "Improve airflow, water at the base, avoid overcrowding."
+      }
+    ]
   },
   {
     "id": "basil",
@@ -42,13 +111,52 @@
     "difficulty": "Easy",
     "tempMin": 18,
     "tempMax": 35,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Tomato", "Chili Pepper"],
-    "antagonists": ["Mint"],
-    "description": "Loves warmth and moderate sun. Next to tomatoes it improves their flavour and repels some pests."
+    "companions": [
+      "Tomato",
+      "Chili Pepper"
+    ],
+    "antagonists": [
+      "Mint"
+    ],
+    "description": "Loves warmth and moderate sun. Next to tomatoes it improves their flavour and repels some pests.",
+    "yieldKgPerPlant": 0.15,
+    "pricePerKg": 25.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap; pinch infested tips."
+      },
+      {
+        "name": "Whitefly",
+        "type": "pest",
+        "remedy": "Yellow sticky traps; neem oil."
+      },
+      {
+        "name": "Fusarium wilt",
+        "type": "disease",
+        "remedy": "Use clean soil, avoid overwatering, remove affected plants."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Whitefly",
+      "Thrips"
+    ]
   },
   {
     "id": "zucchini",
@@ -59,13 +167,43 @@
     "difficulty": "Medium",
     "tempMin": 18,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "High",
     "potSizeMin": 40,
     "companions": [],
-    "antagonists": ["Tomato"],
-    "description": "A vigorous plant that needs very large pots (at least 40 cm) and abundant water."
+    "antagonists": [
+      "Tomato"
+    ],
+    "description": "A vigorous plant that needs very large pots (at least 40 cm) and abundant water.",
+    "yieldKgPerPlant": 3.0,
+    "pricePerKg": 2.2,
+    "pests": [
+      {
+        "name": "Squash bug",
+        "type": "pest",
+        "remedy": "Hand-pick eggs under leaves; row covers until flowering."
+      },
+      {
+        "name": "Cucumber beetle",
+        "type": "pest",
+        "remedy": "Row covers; yellow sticky traps."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Improve airflow; milk or baking-soda spray; water at base."
+      }
+    ]
   },
   {
     "id": "strawberry",
@@ -76,13 +214,43 @@
     "difficulty": "Easy",
     "tempMin": 12,
     "tempMax": 30,
-    "sowingMonths": [2, 3, 4],
-    "harvestMonths": [5, 6, 7],
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Lettuce", "Spinach"],
+    "companions": [
+      "Lettuce",
+      "Spinach"
+    ],
     "antagonists": [],
-    "description": "A perennial that yields sweet fruit in spring. Suited to hanging pots or railing planters."
+    "description": "A perennial that yields sweet fruit in spring. Suited to hanging pots or railing planters.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 8.0,
+    "pests": [
+      {
+        "name": "Slugs",
+        "type": "pest",
+        "remedy": "Straw mulch, beer traps, hand-pick."
+      },
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Spray leaf undersides with water; neem oil."
+      },
+      {
+        "name": "Grey mould (Botrytis)",
+        "type": "disease",
+        "remedy": "Remove ripe or rotting fruit, improve airflow."
+      }
+    ]
   },
   {
     "id": "mint",
@@ -93,13 +261,50 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 30,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [5, 6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "High",
     "potSizeMin": 20,
     "companions": [],
-    "antagonists": ["Basil", "Parsley"],
-    "description": "Very invasive. It is essential to grow it alone in a dedicated pot to keep it from smothering the other plants."
+    "antagonists": [
+      "Basil",
+      "Parsley"
+    ],
+    "description": "Very invasive. It is essential to grow it alone in a dedicated pot to keep it from smothering the other plants.",
+    "yieldKgPerPlant": 0.15,
+    "pricePerKg": 20.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Strong water jet; insecticidal soap."
+      },
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Mist regularly; neem oil."
+      },
+      {
+        "name": "Mint rust",
+        "type": "disease",
+        "remedy": "Remove infected leaves, avoid overhead watering."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Cabbage worm"
+    ]
   },
   {
     "id": "chili",
@@ -110,13 +315,43 @@
     "difficulty": "Easy",
     "tempMin": 18,
     "tempMax": 38,
-    "sowingMonths": [2, 3, 4],
-    "harvestMonths": [8, 9, 10, 11],
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      8,
+      9,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Basil"],
+    "companions": [
+      "Basil"
+    ],
     "antagonists": [],
-    "description": "Loves blazing sun. The more sun it gets, the hotter and more colourful the fruit."
+    "description": "Loves blazing sun. The more sun it gets, the hotter and more colourful the fruit.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 12.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap; ladybugs."
+      },
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Raise humidity; neem oil."
+      },
+      {
+        "name": "Blossom-end rot",
+        "type": "disease",
+        "remedy": "Keep watering even; ensure calcium availability."
+      }
+    ]
   },
   {
     "id": "radish",
@@ -127,13 +362,42 @@
     "difficulty": "Easy",
     "tempMin": 8,
     "tempMax": 25,
-    "sowingMonths": [3, 4, 5, 9, 10],
-    "harvestMonths": [4, 5, 6, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      9,
+      10
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      6,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Lettuce", "Spinach"],
+    "companions": [
+      "Lettuce",
+      "Spinach"
+    ],
     "antagonists": [],
-    "description": "Very fast growing (ready to harvest in 30 days). Perfect for a first growing experience."
+    "description": "Very fast growing (ready to harvest in 30 days). Perfect for a first growing experience.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Row covers; kaolin clay."
+      },
+      {
+        "name": "Cabbage root fly",
+        "type": "pest",
+        "remedy": "Collars around stems; row covers."
+      }
+    ]
   },
   {
     "id": "spinach",
@@ -144,13 +408,45 @@
     "difficulty": "Easy",
     "tempMin": 8,
     "tempMax": 22,
-    "sowingMonths": [2, 3, 9, 10],
-    "harvestMonths": [4, 5, 11, 12],
+    "sowingMonths": [
+      2,
+      3,
+      9,
+      10
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      11,
+      12
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Strawberry", "Radish"],
+    "companions": [
+      "Strawberry",
+      "Radish"
+    ],
     "antagonists": [],
-    "description": "Prefers cool climates. Tolerates shade very well and is ideal for autumn and winter growing."
+    "description": "Prefers cool climates. Tolerates shade very well and is ideal for autumn and winter growing.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 4.0,
+    "pests": [
+      {
+        "name": "Leaf miner",
+        "type": "pest",
+        "remedy": "Remove mined leaves; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Downy mildew",
+        "type": "disease",
+        "remedy": "Resistant varieties, airflow, base watering."
+      }
+    ]
   },
   {
     "id": "parsley",
@@ -161,13 +457,45 @@
     "difficulty": "Easy",
     "tempMin": 12,
     "tempMax": 28,
-    "sowingMonths": [3, 4, 5, 6, 9],
-    "harvestMonths": [5, 6, 7, 8, 9, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Tomato"],
-    "antagonists": ["Mint"],
-    "description": "Grows well in partial sun. A very hardy biennial plant."
+    "companions": [
+      "Tomato"
+    ],
+    "antagonists": [
+      "Mint"
+    ],
+    "description": "Grows well in partial sun. A very hardy biennial plant.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 15.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Carrot fly",
+        "type": "pest",
+        "remedy": "Fine mesh barrier; grow with onions or chives."
+      }
+    ]
   },
   {
     "id": "carrot",
@@ -178,13 +506,47 @@
     "difficulty": "Medium",
     "tempMin": 7,
     "tempMax": 26,
-    "sowingMonths": [3, 4, 5, 6, 7],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 30,
-    "companions": ["Onion", "Leek", "Lettuce", "Radish", "Rosemary"],
-    "antagonists": ["Dill"],
-    "description": "Needs a deep pot for the roots to develop straight. Onions nearby help repel the carrot fly."
+    "companions": [
+      "Onion",
+      "Leek",
+      "Lettuce",
+      "Radish",
+      "Rosemary"
+    ],
+    "antagonists": [
+      "Dill"
+    ],
+    "description": "Needs a deep pot for the roots to develop straight. Onions nearby help repel the carrot fly.",
+    "yieldKgPerPlant": 0.8,
+    "pricePerKg": 1.8,
+    "pests": [
+      {
+        "name": "Carrot fly",
+        "type": "pest",
+        "remedy": "Fleece or mesh barriers; sow with onions/chives."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      }
+    ]
   },
   {
     "id": "bell-pepper",
@@ -195,13 +557,47 @@
     "difficulty": "Medium",
     "tempMin": 16,
     "tempMax": 35,
-    "sowingMonths": [2, 3, 4],
-    "harvestMonths": [7, 8, 9, 10],
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 25,
-    "companions": ["Basil", "Tomato", "Carrot"],
-    "antagonists": ["Fennel"],
-    "description": "A warmth-loving relative of the chili. Sweet, blocky fruit that ripens from green to red in full sun."
+    "companions": [
+      "Basil",
+      "Tomato",
+      "Carrot"
+    ],
+    "antagonists": [
+      "Fennel"
+    ],
+    "description": "A warmth-loving relative of the chili. Sweet, blocky fruit that ripens from green to red in full sun.",
+    "yieldKgPerPlant": 1.5,
+    "pricePerKg": 3.5,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Neem oil; raise humidity."
+      },
+      {
+        "name": "Blossom-end rot",
+        "type": "disease",
+        "remedy": "Even watering; ensure calcium."
+      }
+    ]
   },
   {
     "id": "eggplant",
@@ -212,13 +608,47 @@
     "difficulty": "Medium",
     "tempMin": 18,
     "tempMax": 35,
-    "sowingMonths": [2, 3, 4],
-    "harvestMonths": [7, 8, 9, 10],
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "High",
     "potSizeMin": 35,
-    "companions": ["Bush Bean", "Basil", "Pea"],
-    "antagonists": ["Fennel"],
-    "description": "Loves heat and large pots. Pairs well with beans, which enrich the soil it heavily depletes."
+    "companions": [
+      "Bush Bean",
+      "Basil",
+      "Pea"
+    ],
+    "antagonists": [
+      "Fennel"
+    ],
+    "description": "Loves heat and large pots. Pairs well with beans, which enrich the soil it heavily depletes.",
+    "yieldKgPerPlant": 2.0,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Row covers; kaolin clay."
+      },
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Neem oil."
+      },
+      {
+        "name": "Verticillium wilt",
+        "type": "disease",
+        "remedy": "Rotate crops; choose resistant varieties."
+      }
+    ]
   },
   {
     "id": "cucumber",
@@ -229,13 +659,50 @@
     "difficulty": "Medium",
     "tempMin": 16,
     "tempMax": 35,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [6, 7, 8, 9],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
     "watering": "High",
     "potSizeMin": 30,
-    "companions": ["Bush Bean", "Pea", "Radish", "Dill", "Sunflower"],
-    "antagonists": ["Sage", "Potato"],
-    "description": "A thirsty climber. Give it a trellis on the balcony railing to save space and keep the fruit clean."
+    "companions": [
+      "Bush Bean",
+      "Pea",
+      "Radish",
+      "Dill",
+      "Sunflower"
+    ],
+    "antagonists": [
+      "Sage",
+      "Potato"
+    ],
+    "description": "A thirsty climber. Give it a trellis on the balcony railing to save space and keep the fruit clean.",
+    "yieldKgPerPlant": 2.5,
+    "pricePerKg": 2.2,
+    "pests": [
+      {
+        "name": "Cucumber beetle",
+        "type": "pest",
+        "remedy": "Row covers; sticky traps."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; milk spray; water at base."
+      }
+    ]
   },
   {
     "id": "bush-bean",
@@ -246,13 +713,49 @@
     "difficulty": "Easy",
     "tempMin": 14,
     "tempMax": 30,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [7, 8, 9],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Carrot", "Cucumber", "Strawberry", "Celery"],
-    "antagonists": ["Onion", "Garlic", "Fennel"],
-    "description": "A compact nitrogen-fixer that enriches the soil. Ideal as a beginner's first vegetable."
+    "companions": [
+      "Carrot",
+      "Cucumber",
+      "Strawberry",
+      "Celery"
+    ],
+    "antagonists": [
+      "Onion",
+      "Garlic",
+      "Fennel"
+    ],
+    "description": "A compact nitrogen-fixer that enriches the soil. Ideal as a beginner's first vegetable.",
+    "yieldKgPerPlant": 0.6,
+    "pricePerKg": 4.0,
+    "pests": [
+      {
+        "name": "Mexican bean beetle",
+        "type": "pest",
+        "remedy": "Hand-pick; neem oil."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Bean rust",
+        "type": "disease",
+        "remedy": "Avoid overhead watering; ensure airflow."
+      }
+    ]
   },
   {
     "id": "pea",
@@ -263,13 +766,49 @@
     "difficulty": "Easy",
     "tempMin": 7,
     "tempMax": 24,
-    "sowingMonths": [2, 3, 9, 10],
-    "harvestMonths": [5, 6, 11],
+    "sowingMonths": [
+      2,
+      3,
+      9,
+      10
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Carrot", "Radish", "Cucumber", "Turnip"],
-    "antagonists": ["Onion", "Garlic"],
-    "description": "A cool-season climber that fixes nitrogen. Sow early in spring or autumn and give it support."
+    "companions": [
+      "Carrot",
+      "Radish",
+      "Cucumber",
+      "Turnip"
+    ],
+    "antagonists": [
+      "Onion",
+      "Garlic"
+    ],
+    "description": "A cool-season climber that fixes nitrogen. Sow early in spring or autumn and give it support.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 5.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap; ladybugs."
+      },
+      {
+        "name": "Pea moth",
+        "type": "pest",
+        "remedy": "Cover during flowering; sow early or late."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; resistant varieties."
+      }
+    ]
   },
   {
     "id": "arugula",
@@ -280,13 +819,42 @@
     "difficulty": "Easy",
     "tempMin": 8,
     "tempMax": 24,
-    "sowingMonths": [3, 4, 5, 9, 10],
-    "harvestMonths": [4, 5, 6, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      9,
+      10
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      6,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Lettuce", "Spinach"],
+    "companions": [
+      "Lettuce",
+      "Spinach"
+    ],
     "antagonists": [],
-    "description": "A fast, peppery salad green. Tolerates partial shade and bolts quickly in summer heat."
+    "description": "A fast, peppery salad green. Tolerates partial shade and bolts quickly in summer heat.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 12.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      }
+    ]
   },
   {
     "id": "kale",
@@ -297,13 +865,50 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 26,
-    "sowingMonths": [4, 5, 6, 7],
-    "harvestMonths": [9, 10, 11, 12, 1, 2],
+    "sowingMonths": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11,
+      12,
+      1,
+      2
+    ],
     "watering": "Medium",
     "potSizeMin": 25,
-    "companions": ["Beetroot", "Onion", "Chamomile"],
-    "antagonists": ["Strawberry"],
-    "description": "An extremely hardy leafy green whose flavour actually improves after the first frost."
+    "companions": [
+      "Beetroot",
+      "Onion",
+      "Chamomile"
+    ],
+    "antagonists": [
+      "Strawberry"
+    ],
+    "description": "An extremely hardy leafy green whose flavour actually improves after the first frost.",
+    "yieldKgPerPlant": 0.8,
+    "pricePerKg": 4.0,
+    "pests": [
+      {
+        "name": "Cabbage worm",
+        "type": "pest",
+        "remedy": "Hand-pick; Bt spray; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Strong water jet; insecticidal soap."
+      },
+      {
+        "name": "Clubroot",
+        "type": "disease",
+        "remedy": "Rotate brassicas; raise soil pH."
+      }
+    ]
   },
   {
     "id": "swiss-chard",
@@ -314,13 +919,50 @@
     "difficulty": "Easy",
     "tempMin": 8,
     "tempMax": 28,
-    "sowingMonths": [3, 4, 5, 8, 9],
-    "harvestMonths": [5, 6, 7, 8, 9, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Bush Bean", "Radish", "Lettuce"],
+    "companions": [
+      "Bush Bean",
+      "Radish",
+      "Lettuce"
+    ],
     "antagonists": [],
-    "description": "A cut-and-come-again green with colourful stems. One sowing keeps producing for months."
+    "description": "A cut-and-come-again green with colourful stems. One sowing keeps producing for months.",
+    "yieldKgPerPlant": 1.0,
+    "pricePerKg": 3.5,
+    "pests": [
+      {
+        "name": "Leaf miner",
+        "type": "pest",
+        "remedy": "Remove mined leaves; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Cercospora leaf spot",
+        "type": "disease",
+        "remedy": "Remove spotted leaves; improve airflow."
+      }
+    ]
   },
   {
     "id": "beetroot",
@@ -331,13 +973,46 @@
     "difficulty": "Easy",
     "tempMin": 7,
     "tempMax": 26,
-    "sowingMonths": [3, 4, 5, 6, 7],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Kale", "Lettuce", "Onion", "Broccoli"],
-    "antagonists": ["Bush Bean"],
-    "description": "Both the root and the leaves are edible. Grows happily in a medium-depth container."
+    "companions": [
+      "Kale",
+      "Lettuce",
+      "Onion",
+      "Broccoli"
+    ],
+    "antagonists": [
+      "Bush Bean"
+    ],
+    "description": "Both the root and the leaves are edible. Grows happily in a medium-depth container.",
+    "yieldKgPerPlant": 0.6,
+    "pricePerKg": 2.5,
+    "pests": [
+      {
+        "name": "Leaf miner",
+        "type": "pest",
+        "remedy": "Remove leaves; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      }
+    ]
   },
   {
     "id": "onion",
@@ -348,13 +1023,48 @@
     "difficulty": "Easy",
     "tempMin": 7,
     "tempMax": 28,
-    "sowingMonths": [2, 3, 4, 9],
-    "harvestMonths": [7, 8, 9],
+    "sowingMonths": [
+      2,
+      3,
+      4,
+      9
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9
+    ],
     "watering": "Low",
     "potSizeMin": 20,
-    "companions": ["Carrot", "Beetroot", "Lettuce", "Chamomile"],
-    "antagonists": ["Bush Bean", "Pea"],
-    "description": "A pest-repelling allium that protects nearby carrots, but dislikes growing next to legumes."
+    "companions": [
+      "Carrot",
+      "Beetroot",
+      "Lettuce",
+      "Chamomile"
+    ],
+    "antagonists": [
+      "Bush Bean",
+      "Pea"
+    ],
+    "description": "A pest-repelling allium that protects nearby carrots, but dislikes growing next to legumes.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 1.8,
+    "pests": [
+      {
+        "name": "Onion fly",
+        "type": "pest",
+        "remedy": "Row covers; rotate planting."
+      },
+      {
+        "name": "Thrips",
+        "type": "pest",
+        "remedy": "Blue sticky traps; neem oil."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Carrot fly"
+    ]
   },
   {
     "id": "garlic",
@@ -365,13 +1075,45 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 28,
-    "sowingMonths": [10, 11, 12],
-    "harvestMonths": [6, 7],
+    "sowingMonths": [
+      10,
+      11,
+      12
+    ],
+    "harvestMonths": [
+      6,
+      7
+    ],
     "watering": "Low",
     "potSizeMin": 18,
-    "companions": ["Tomato", "Carrot", "Strawberry"],
-    "antagonists": ["Bush Bean", "Pea"],
-    "description": "Planted in autumn for a summer harvest. A natural fungicide that deters many balcony pests."
+    "companions": [
+      "Tomato",
+      "Carrot",
+      "Strawberry"
+    ],
+    "antagonists": [
+      "Bush Bean",
+      "Pea"
+    ],
+    "description": "Planted in autumn for a summer harvest. A natural fungicide that deters many balcony pests.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 8.0,
+    "pests": [
+      {
+        "name": "Onion fly",
+        "type": "pest",
+        "remedy": "Row covers; rotate planting."
+      },
+      {
+        "name": "White rot",
+        "type": "disease",
+        "remedy": "Long rotation; use clean seed cloves."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Spider mites"
+    ]
   },
   {
     "id": "chive",
@@ -382,13 +1124,49 @@
     "difficulty": "Easy",
     "tempMin": 6,
     "tempMax": 28,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [5, 6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Carrot", "Tomato", "Strawberry"],
-    "antagonists": ["Bush Bean", "Pea"],
-    "description": "A perennial onion-flavoured herb with edible purple flowers. Thrives in a small pot for years."
+    "companions": [
+      "Carrot",
+      "Tomato",
+      "Strawberry"
+    ],
+    "antagonists": [
+      "Bush Bean",
+      "Pea"
+    ],
+    "description": "A perennial onion-flavoured herb with edible purple flowers. Thrives in a small pot for years.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 20.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Thrips",
+        "type": "pest",
+        "remedy": "Neem oil."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Carrot fly"
+    ]
   },
   {
     "id": "rosemary",
@@ -399,13 +1177,52 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 35,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
     "watering": "Low",
     "potSizeMin": 25,
-    "companions": ["Carrot", "Bush Bean", "Sage"],
+    "companions": [
+      "Carrot",
+      "Bush Bean",
+      "Sage"
+    ],
     "antagonists": [],
-    "description": "An evergreen Mediterranean shrub that thrives in full sun and tolerates drought beautifully."
+    "description": "An evergreen Mediterranean shrub that thrives in full sun and tolerates drought beautifully.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 18.0,
+    "pests": [
+      {
+        "name": "Spittlebug",
+        "type": "pest",
+        "remedy": "Hose off the foam; generally low risk."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; avoid wet foliage."
+      }
+    ],
+    "deters": [
+      "Cabbage worm",
+      "Carrot fly"
+    ]
   },
   {
     "id": "thyme",
@@ -416,13 +1233,45 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [5, 6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Low",
     "potSizeMin": 15,
-    "companions": ["Cabbage", "Strawberry", "Eggplant"],
+    "companions": [
+      "Cabbage",
+      "Strawberry",
+      "Eggplant"
+    ],
     "antagonists": [],
-    "description": "A low-growing, drought-tolerant herb. Its flowers attract pollinators to the whole balcony."
+    "description": "A low-growing, drought-tolerant herb. Its flowers attract pollinators to the whole balcony.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 25.0,
+    "pests": [
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Mist; neem oil."
+      },
+      {
+        "name": "Root rot",
+        "type": "disease",
+        "remedy": "Well-drained soil; avoid overwatering."
+      }
+    ],
+    "deters": [
+      "Cabbage worm",
+      "Whitefly"
+    ]
   },
   {
     "id": "oregano",
@@ -433,13 +1282,39 @@
     "difficulty": "Easy",
     "tempMin": 6,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Low",
     "potSizeMin": 15,
-    "companions": ["Bell Pepper", "Tomato"],
+    "companions": [
+      "Bell Pepper",
+      "Tomato"
+    ],
     "antagonists": [],
-    "description": "A hardy perennial that loves sun and poor, well-drained soil. Spreads to fill its pot."
+    "description": "A hardy perennial that loves sun and poor, well-drained soil. Spreads to fill its pot.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 22.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Root rot",
+        "type": "disease",
+        "remedy": "Well-drained soil."
+      }
+    ]
   },
   {
     "id": "sage",
@@ -450,13 +1325,47 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [5, 6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Low",
     "potSizeMin": 20,
-    "companions": ["Rosemary", "Cabbage", "Carrot"],
-    "antagonists": ["Cucumber"],
-    "description": "An aromatic evergreen herb that deters cabbage moths. Prefers dry feet and plenty of light."
+    "companions": [
+      "Rosemary",
+      "Cabbage",
+      "Carrot"
+    ],
+    "antagonists": [
+      "Cucumber"
+    ],
+    "description": "An aromatic evergreen herb that deters cabbage moths. Prefers dry feet and plenty of light.",
+    "yieldKgPerPlant": 0.15,
+    "pricePerKg": 20.0,
+    "pests": [
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Neem oil."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; avoid overhead water."
+      }
+    ],
+    "deters": [
+      "Cabbage worm",
+      "Carrot fly"
+    ]
   },
   {
     "id": "coriander",
@@ -467,13 +1376,48 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 28,
-    "sowingMonths": [3, 4, 5, 8, 9],
-    "harvestMonths": [5, 6, 7, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 15,
-    "companions": ["Spinach", "Bush Bean"],
-    "antagonists": ["Fennel"],
-    "description": "Grown for both its leaves (cilantro) and seeds. Bolts fast in heat, so prefers cooler spells."
+    "companions": [
+      "Spinach",
+      "Bush Bean"
+    ],
+    "antagonists": [
+      "Fennel"
+    ],
+    "description": "Grown for both its leaves (cilantro) and seeds. Bolts fast in heat, so prefers cooler spells.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 18.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Improve airflow."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Spider mites"
+    ]
   },
   {
     "id": "dill",
@@ -484,13 +1428,46 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 30,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [6, 7, 8, 9],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
     "watering": "Medium",
     "potSizeMin": 18,
-    "companions": ["Cucumber", "Lettuce", "Cabbage"],
-    "antagonists": ["Carrot"],
-    "description": "A feathery herb whose flowers attract beneficial insects. Keep it away from carrots, a close relative."
+    "companions": [
+      "Cucumber",
+      "Lettuce",
+      "Cabbage"
+    ],
+    "antagonists": [
+      "Carrot"
+    ],
+    "description": "A feathery herb whose flowers attract beneficial insects. Keep it away from carrots, a close relative.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 18.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Parsley worm",
+        "type": "pest",
+        "remedy": "Hand-pick (it becomes a swallowtail butterfly)."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Spider mites"
+    ]
   },
   {
     "id": "marigold",
@@ -501,13 +1478,47 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 35,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Low",
     "potSizeMin": 15,
-    "companions": ["Tomato", "Bell Pepper", "Cucumber", "Eggplant"],
+    "companions": [
+      "Tomato",
+      "Bell Pepper",
+      "Cucumber",
+      "Eggplant"
+    ],
     "antagonists": [],
-    "description": "A companion-planting hero: its roots deter nematodes and its scent confuses many vegetable pests."
+    "description": "A companion-planting hero: its roots deter nematodes and its scent confuses many vegetable pests.",
+    "yieldKgPerPlant": 0.0,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Spider mites",
+        "type": "pest",
+        "remedy": "Neem oil; otherwise very resilient."
+      },
+      {
+        "name": "Grey mould",
+        "type": "disease",
+        "remedy": "Deadhead spent blooms; improve airflow."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Nematodes",
+      "Whitefly"
+    ]
   },
   {
     "id": "nasturtium",
@@ -518,13 +1529,45 @@
     "difficulty": "Easy",
     "tempMin": 10,
     "tempMax": 32,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [6, 7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Low",
     "potSizeMin": 18,
-    "companions": ["Cucumber", "Zucchini", "Watermelon"],
+    "companions": [
+      "Cucumber",
+      "Zucchini",
+      "Watermelon"
+    ],
     "antagonists": [],
-    "description": "An edible-flowered trap crop that lures aphids away from your vegetables. Trails beautifully from pots."
+    "description": "An edible-flowered trap crop that lures aphids away from your vegetables. Trails beautifully from pots.",
+    "yieldKgPerPlant": 0.05,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Acts as a trap crop; hose off or remove infested parts."
+      },
+      {
+        "name": "Cabbage white",
+        "type": "pest",
+        "remedy": "Hand-pick caterpillars."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Whitefly",
+      "Squash bug"
+    ]
   },
   {
     "id": "chamomile",
@@ -535,13 +1578,37 @@
     "difficulty": "Easy",
     "tempMin": 7,
     "tempMax": 30,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [6, 7, 8],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8
+    ],
     "watering": "Low",
     "potSizeMin": 15,
-    "companions": ["Cabbage", "Onion", "Kale"],
+    "companions": [
+      "Cabbage",
+      "Onion",
+      "Kale"
+    ],
     "antagonists": [],
-    "description": "A delicate herb for teas that improves the vigour of nearby brassicas and attracts pollinators."
+    "description": "A delicate herb for teas that improves the vigour of nearby brassicas and attracts pollinators.",
+    "yieldKgPerPlant": 0.0,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap; usually pest-free."
+      }
+    ],
+    "deters": [
+      "Aphids"
+    ]
   },
   {
     "id": "lavender",
@@ -552,13 +1619,42 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [6, 7, 8],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8
+    ],
     "watering": "Low",
     "potSizeMin": 25,
-    "companions": ["Rosemary", "Thyme", "Sage"],
+    "companions": [
+      "Rosemary",
+      "Thyme",
+      "Sage"
+    ],
     "antagonists": [],
-    "description": "A drought-loving perennial that draws bees and butterflies. Needs full sun and sharp drainage."
+    "description": "A drought-loving perennial that draws bees and butterflies. Needs full sun and sharp drainage.",
+    "yieldKgPerPlant": 0.0,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Spittlebug",
+        "type": "pest",
+        "remedy": "Hose off; low risk."
+      },
+      {
+        "name": "Root rot",
+        "type": "disease",
+        "remedy": "Sharp drainage; avoid wet feet."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Moths"
+    ]
   },
   {
     "id": "cabbage",
@@ -569,13 +1665,51 @@
     "difficulty": "Medium",
     "tempMin": 5,
     "tempMax": 24,
-    "sowingMonths": [3, 4, 5, 6, 7],
-    "harvestMonths": [9, 10, 11, 12],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11,
+      12
+    ],
     "watering": "High",
     "potSizeMin": 30,
-    "companions": ["Beetroot", "Thyme", "Sage", "Chamomile", "Celery"],
-    "antagonists": ["Strawberry"],
-    "description": "A heavy feeder that forms tight heads in cool weather. Aromatic herbs nearby ward off the cabbage moth."
+    "companions": [
+      "Beetroot",
+      "Thyme",
+      "Sage",
+      "Chamomile",
+      "Celery"
+    ],
+    "antagonists": [
+      "Strawberry"
+    ],
+    "description": "A heavy feeder that forms tight heads in cool weather. Aromatic herbs nearby ward off the cabbage moth.",
+    "yieldKgPerPlant": 1.2,
+    "pricePerKg": 1.5,
+    "pests": [
+      {
+        "name": "Cabbage worm",
+        "type": "pest",
+        "remedy": "Bt spray; row covers; hand-pick."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Strong water jet."
+      },
+      {
+        "name": "Clubroot",
+        "type": "disease",
+        "remedy": "Rotate; lime the soil."
+      }
+    ]
   },
   {
     "id": "broccoli",
@@ -586,13 +1720,50 @@
     "difficulty": "Medium",
     "tempMin": 5,
     "tempMax": 24,
-    "sowingMonths": [3, 4, 5, 6, 7],
-    "harvestMonths": [9, 10, 11, 12],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11,
+      12
+    ],
     "watering": "High",
     "potSizeMin": 30,
-    "companions": ["Beetroot", "Onion", "Celery"],
-    "antagonists": ["Tomato", "Strawberry"],
-    "description": "A cool-season brassica. After the central head is cut, it keeps producing smaller side shoots."
+    "companions": [
+      "Beetroot",
+      "Onion",
+      "Celery"
+    ],
+    "antagonists": [
+      "Tomato",
+      "Strawberry"
+    ],
+    "description": "A cool-season brassica. After the central head is cut, it keeps producing smaller side shoots.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Cabbage worm",
+        "type": "pest",
+        "remedy": "Bt; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Downy mildew",
+        "type": "disease",
+        "remedy": "Airflow; water at base."
+      }
+    ]
   },
   {
     "id": "cauliflower",
@@ -603,13 +1774,48 @@
     "difficulty": "Hard",
     "tempMin": 7,
     "tempMax": 24,
-    "sowingMonths": [3, 4, 5, 6],
-    "harvestMonths": [9, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11
+    ],
     "watering": "High",
     "potSizeMin": 30,
-    "companions": ["Beetroot", "Spinach", "Celery"],
-    "antagonists": ["Tomato", "Strawberry"],
-    "description": "The fussiest brassica: it needs steady moisture and cool temperatures to form a firm white curd."
+    "companions": [
+      "Beetroot",
+      "Spinach",
+      "Celery"
+    ],
+    "antagonists": [
+      "Tomato",
+      "Strawberry"
+    ],
+    "description": "The fussiest brassica: it needs steady moisture and cool temperatures to form a firm white curd.",
+    "yieldKgPerPlant": 0.7,
+    "pricePerKg": 2.8,
+    "pests": [
+      {
+        "name": "Cabbage worm",
+        "type": "pest",
+        "remedy": "Bt; row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Clubroot",
+        "type": "disease",
+        "remedy": "Rotate brassicas; raise pH."
+      }
+    ]
   },
   {
     "id": "leek",
@@ -620,13 +1826,49 @@
     "difficulty": "Medium",
     "tempMin": 5,
     "tempMax": 26,
-    "sowingMonths": [2, 3, 4],
-    "harvestMonths": [9, 10, 11, 12, 1],
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11,
+      12,
+      1
+    ],
     "watering": "Medium",
     "potSizeMin": 25,
-    "companions": ["Carrot", "Onion", "Celery"],
-    "antagonists": ["Bush Bean", "Pea"],
-    "description": "A hardy allium that stands through winter. Mound soil around the stems to blanch them white and tender."
+    "companions": [
+      "Carrot",
+      "Onion",
+      "Celery"
+    ],
+    "antagonists": [
+      "Bush Bean",
+      "Pea"
+    ],
+    "description": "A hardy allium that stands through winter. Mound soil around the stems to blanch them white and tender.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Leek moth",
+        "type": "pest",
+        "remedy": "Fine mesh covers."
+      },
+      {
+        "name": "Onion thrips",
+        "type": "pest",
+        "remedy": "Blue sticky traps."
+      },
+      {
+        "name": "Leek rust",
+        "type": "disease",
+        "remedy": "Space well; improve airflow."
+      }
+    ]
   },
   {
     "id": "celery",
@@ -637,13 +1879,45 @@
     "difficulty": "Hard",
     "tempMin": 8,
     "tempMax": 26,
-    "sowingMonths": [3, 4, 5],
-    "harvestMonths": [8, 9, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      8,
+      9,
+      10,
+      11
+    ],
     "watering": "High",
     "potSizeMin": 25,
-    "companions": ["Bush Bean", "Cabbage", "Leek"],
+    "companions": [
+      "Bush Bean",
+      "Cabbage",
+      "Leek"
+    ],
     "antagonists": [],
-    "description": "A thirsty crop that demands constant moisture and rich soil. Rewards patience with crisp stalks."
+    "description": "A thirsty crop that demands constant moisture and rich soil. Rewards patience with crisp stalks.",
+    "yieldKgPerPlant": 0.6,
+    "pricePerKg": 2.5,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Slugs",
+        "type": "pest",
+        "remedy": "Beer traps; hand-pick."
+      },
+      {
+        "name": "Leaf blight",
+        "type": "disease",
+        "remedy": "Airflow; water at base."
+      }
+    ]
   },
   {
     "id": "fennel",
@@ -654,13 +1928,42 @@
     "difficulty": "Medium",
     "tempMin": 8,
     "tempMax": 30,
-    "sowingMonths": [4, 5, 6, 7],
-    "harvestMonths": [8, 9, 10, 11],
+    "sowingMonths": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "harvestMonths": [
+      8,
+      9,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 30,
     "companions": [],
-    "antagonists": ["Tomato", "Coriander", "Bush Bean", "Bell Pepper"],
-    "description": "Best grown alone: it secretes compounds that stunt most neighbours. Forms a sweet anise-flavoured bulb."
+    "antagonists": [
+      "Tomato",
+      "Coriander",
+      "Bush Bean",
+      "Bell Pepper"
+    ],
+    "description": "Best grown alone: it secretes compounds that stunt most neighbours. Forms a sweet anise-flavoured bulb.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Parsley worm",
+        "type": "pest",
+        "remedy": "Hand-pick."
+      }
+    ]
   },
   {
     "id": "turnip",
@@ -671,13 +1974,40 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 24,
-    "sowingMonths": [3, 4, 8, 9],
-    "harvestMonths": [5, 6, 10, 11],
+    "sowingMonths": [
+      3,
+      4,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      10,
+      11
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Pea", "Lettuce"],
+    "companions": [
+      "Pea",
+      "Lettuce"
+    ],
     "antagonists": [],
-    "description": "A fast-maturing root crop for cool seasons. Both the swollen root and the leafy tops are edible."
+    "description": "A fast-maturing root crop for cool seasons. Both the swollen root and the leafy tops are edible.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 2.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Row covers."
+      },
+      {
+        "name": "Cabbage root fly",
+        "type": "pest",
+        "remedy": "Stem collars; covers."
+      }
+    ]
   },
   {
     "id": "sweet-potato",
@@ -688,13 +2018,35 @@
     "difficulty": "Medium",
     "tempMin": 18,
     "tempMax": 38,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 40,
-    "companions": ["Bush Bean"],
+    "companions": [
+      "Bush Bean"
+    ],
     "antagonists": [],
-    "description": "A heat-loving tuber with trailing vines. Needs a large, deep container and a long, warm growing season."
+    "description": "A heat-loving tuber with trailing vines. Needs a large, deep container and a long, warm growing season.",
+    "yieldKgPerPlant": 1.0,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Sweet potato weevil",
+        "type": "pest",
+        "remedy": "Use clean slips; rotate planting."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      }
+    ]
   },
   {
     "id": "potato",
@@ -705,13 +2057,47 @@
     "difficulty": "Medium",
     "tempMin": 7,
     "tempMax": 28,
-    "sowingMonths": [3, 4],
-    "harvestMonths": [7, 8, 9],
+    "sowingMonths": [
+      3,
+      4
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9
+    ],
     "watering": "Medium",
     "potSizeMin": 40,
-    "companions": ["Bush Bean", "Cabbage", "Marigold"],
-    "antagonists": ["Tomato", "Cucumber", "Sunflower"],
-    "description": "Grown easily in a deep grow-bag. Earth up the stems as they rise to boost the tuber harvest."
+    "companions": [
+      "Bush Bean",
+      "Cabbage",
+      "Marigold"
+    ],
+    "antagonists": [
+      "Tomato",
+      "Cucumber",
+      "Sunflower"
+    ],
+    "description": "Grown easily in a deep grow-bag. Earth up the stems as they rise to boost the tuber harvest.",
+    "yieldKgPerPlant": 1.0,
+    "pricePerKg": 1.5,
+    "pests": [
+      {
+        "name": "Colorado potato beetle",
+        "type": "pest",
+        "remedy": "Hand-pick; neem oil; rotate."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Late blight",
+        "type": "disease",
+        "remedy": "Hill the soil; resistant varieties; remove infected foliage."
+      }
+    ]
   },
   {
     "id": "pumpkin",
@@ -722,13 +2108,44 @@
     "difficulty": "Medium",
     "tempMin": 16,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      9,
+      10
+    ],
     "watering": "High",
     "potSizeMin": 50,
-    "companions": ["Sweet Corn", "Bush Bean", "Nasturtium"],
-    "antagonists": ["Potato"],
-    "description": "A sprawling vine needing the largest pots and lots of water. Train it up a sturdy balcony trellis to save floor space."
+    "companions": [
+      "Sweet Corn",
+      "Bush Bean",
+      "Nasturtium"
+    ],
+    "antagonists": [
+      "Potato"
+    ],
+    "description": "A sprawling vine needing the largest pots and lots of water. Train it up a sturdy balcony trellis to save floor space.",
+    "yieldKgPerPlant": 4.0,
+    "pricePerKg": 1.8,
+    "pests": [
+      {
+        "name": "Squash bug",
+        "type": "pest",
+        "remedy": "Hand-pick eggs; row covers."
+      },
+      {
+        "name": "Squash vine borer",
+        "type": "pest",
+        "remedy": "Cover stems; row covers early."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; milk spray."
+      }
+    ]
   },
   {
     "id": "watermelon",
@@ -739,13 +2156,44 @@
     "difficulty": "Hard",
     "tempMin": 20,
     "tempMax": 38,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [8, 9],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      8,
+      9
+    ],
     "watering": "High",
     "potSizeMin": 45,
-    "companions": ["Sweet Corn", "Nasturtium", "Marigold"],
-    "antagonists": ["Potato"],
-    "description": "Demands intense heat, full sun and a big pot. Choose a compact bush variety for balcony success."
+    "companions": [
+      "Sweet Corn",
+      "Nasturtium",
+      "Marigold"
+    ],
+    "antagonists": [
+      "Potato"
+    ],
+    "description": "Demands intense heat, full sun and a big pot. Choose a compact bush variety for balcony success.",
+    "yieldKgPerPlant": 6.0,
+    "pricePerKg": 1.2,
+    "pests": [
+      {
+        "name": "Cucumber beetle",
+        "type": "pest",
+        "remedy": "Row covers; sticky traps."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Fusarium wilt",
+        "type": "disease",
+        "remedy": "Rotate; resistant varieties."
+      }
+    ]
   },
   {
     "id": "melon",
@@ -756,13 +2204,44 @@
     "difficulty": "Hard",
     "tempMin": 18,
     "tempMax": 38,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [8, 9],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      8,
+      9
+    ],
     "watering": "High",
     "potSizeMin": 40,
-    "companions": ["Sweet Corn", "Nasturtium", "Marigold"],
-    "antagonists": ["Potato"],
-    "description": "A sun-worshipping vine. Support ripening fruit in a net sling when grown vertically on a balcony."
+    "companions": [
+      "Sweet Corn",
+      "Nasturtium",
+      "Marigold"
+    ],
+    "antagonists": [
+      "Potato"
+    ],
+    "description": "A sun-worshipping vine. Support ripening fruit in a net sling when grown vertically on a balcony.",
+    "yieldKgPerPlant": 2.0,
+    "pricePerKg": 2.0,
+    "pests": [
+      {
+        "name": "Cucumber beetle",
+        "type": "pest",
+        "remedy": "Row covers."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Airflow; water at base."
+      }
+    ]
   },
   {
     "id": "okra",
@@ -773,13 +2252,44 @@
     "difficulty": "Medium",
     "tempMin": 18,
     "tempMax": 38,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [7, 8, 9, 10],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 30,
-    "companions": ["Bell Pepper", "Cucumber", "Basil"],
+    "companions": [
+      "Bell Pepper",
+      "Cucumber",
+      "Basil"
+    ],
     "antagonists": [],
-    "description": "A tall, heat-loving plant with showy flowers. Harvest the tender pods young, every couple of days."
+    "description": "A tall, heat-loving plant with showy flowers. Harvest the tender pods young, every couple of days.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 6.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Row covers."
+      },
+      {
+        "name": "Fusarium wilt",
+        "type": "disease",
+        "remedy": "Rotate; use clean soil."
+      }
+    ]
   },
   {
     "id": "sweet-corn",
@@ -790,13 +2300,44 @@
     "difficulty": "Medium",
     "tempMin": 15,
     "tempMax": 35,
-    "sowingMonths": [4, 5],
-    "harvestMonths": [8, 9],
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      8,
+      9
+    ],
     "watering": "High",
     "potSizeMin": 35,
-    "companions": ["Bush Bean", "Pumpkin", "Cucumber"],
-    "antagonists": ["Tomato"],
-    "description": "The classic 'Three Sisters' partner. Plant in a tight block of several pots so the ears pollinate well."
+    "companions": [
+      "Bush Bean",
+      "Pumpkin",
+      "Cucumber"
+    ],
+    "antagonists": [
+      "Tomato"
+    ],
+    "description": "The classic 'Three Sisters' partner. Plant in a tight block of several pots so the ears pollinate well.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 3.0,
+    "pests": [
+      {
+        "name": "Corn earworm",
+        "type": "pest",
+        "remedy": "Apply mineral oil to silks; Bt."
+      },
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Strong water jet."
+      },
+      {
+        "name": "Corn smut",
+        "type": "disease",
+        "remedy": "Remove galls early; rotate."
+      }
+    ]
   },
   {
     "id": "sunflower",
@@ -807,13 +2348,43 @@
     "difficulty": "Easy",
     "tempMin": 12,
     "tempMax": 38,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [8, 9, 10],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 30,
-    "companions": ["Cucumber", "Zucchini"],
-    "antagonists": ["Potato"],
-    "description": "A cheerful pollinator magnet. Dwarf varieties suit pots, and the seed heads feed birds in autumn."
+    "companions": [
+      "Cucumber",
+      "Zucchini"
+    ],
+    "antagonists": [
+      "Potato"
+    ],
+    "description": "A cheerful pollinator magnet. Dwarf varieties suit pots, and the seed heads feed birds in autumn.",
+    "yieldKgPerPlant": 0.05,
+    "pricePerKg": 6.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Acts as a trap crop; hose off."
+      },
+      {
+        "name": "Sunflower moth",
+        "type": "pest",
+        "remedy": "Encourage birds; remove damaged heads."
+      }
+    ],
+    "deters": [
+      "Aphids"
+    ]
   },
   {
     "id": "borage",
@@ -824,13 +2395,39 @@
     "difficulty": "Easy",
     "tempMin": 8,
     "tempMax": 32,
-    "sowingMonths": [4, 5, 6],
-    "harvestMonths": [6, 7, 8, 9],
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
     "watering": "Medium",
     "potSizeMin": 20,
-    "companions": ["Strawberry", "Tomato", "Zucchini"],
+    "companions": [
+      "Strawberry",
+      "Tomato",
+      "Zucchini"
+    ],
     "antagonists": [],
-    "description": "An edible-flowered herb that draws bees and is said to improve the flavour of strawberries and tomatoes."
+    "description": "An edible-flowered herb that draws bees and is said to improve the flavour of strawberries and tomatoes.",
+    "yieldKgPerPlant": 0.0,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Trap crop; hose off or leave for ladybugs."
+      }
+    ],
+    "deters": [
+      "Tomato hornworm",
+      "Cabbage worm"
+    ]
   },
   {
     "id": "sorrel",
@@ -841,12 +2438,40 @@
     "difficulty": "Easy",
     "tempMin": 5,
     "tempMax": 26,
-    "sowingMonths": [3, 4, 5, 9],
-    "harvestMonths": [5, 6, 7, 8, 9, 10],
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
     "watering": "Medium",
     "potSizeMin": 18,
-    "companions": ["Strawberry"],
+    "companions": [
+      "Strawberry"
+    ],
     "antagonists": [],
-    "description": "A hardy perennial green with a sharp, lemony tang. Tolerates shade and crops for years from one pot."
+    "description": "A hardy perennial green with a sharp, lemony tang. Tolerates shade and crops for years from one pot.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 10.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Insecticidal soap."
+      },
+      {
+        "name": "Slugs",
+        "type": "pest",
+        "remedy": "Beer traps; hand-pick."
+      }
+    ]
   }
 ]

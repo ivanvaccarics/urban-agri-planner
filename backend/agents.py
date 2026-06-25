@@ -540,6 +540,179 @@ def build_planting_schedule(
     return schedule
 
 
+def compute_yield_estimate(
+    selected_plants: list[dict[str, Any]],
+    plants_per_crop: int = 1,
+) -> dict[str, Any]:
+    """Estimate the seasonal harvest and grocery-cost saving of a crop set.
+
+    Each plant record carries ``yieldKgPerPlant`` (typical full-season harvest of
+    a single plant) and ``pricePerKg`` (typical retail price). This deterministic
+    helper multiplies those by ``plants_per_crop`` to produce a per-crop and total
+    estimate of how much produce the plan yields and what buying it would cost.
+
+    Ornamental / companion-only plants (e.g. marigold) have a ``pricePerKg`` of 0
+    and therefore contribute no monetary value, only their companion benefit.
+
+    Args:
+        selected_plants: Full plant records that the user approved.
+        plants_per_crop: How many plants of each crop are assumed to be grown.
+
+    Returns:
+        Dict with per-crop ``crops`` entries plus ``totalYieldKg``,
+        ``totalValueEur``, ``currency`` and an ``assumption`` note.
+    """
+    plants_per_crop = max(1, int(plants_per_crop or 1))
+    crops: list[dict[str, Any]] = []
+    total_yield = 0.0
+    total_value = 0.0
+
+    for plant in selected_plants:
+        yield_per_plant = float(plant.get("yieldKgPerPlant") or 0.0)
+        price_per_kg = float(plant.get("pricePerKg") or 0.0)
+        crop_yield = round(yield_per_plant * plants_per_crop, 2)
+        crop_value = round(crop_yield * price_per_kg, 2)
+        total_yield += crop_yield
+        total_value += crop_value
+        crops.append(
+            {
+                "plant": plant["name"],
+                "plantsAssumed": plants_per_crop,
+                "yieldKgPerPlant": yield_per_plant,
+                "yieldKg": crop_yield,
+                "pricePerKg": price_per_kg,
+                "valueEur": crop_value,
+                "ornamental": price_per_kg == 0,
+            }
+        )
+
+    return {
+        "crops": crops,
+        "totalYieldKg": round(total_yield, 2),
+        "totalValueEur": round(total_value, 2),
+        "currency": "EUR",
+        "plantsPerCrop": plants_per_crop,
+        "assumption": (
+            f"Estimates assume {plants_per_crop} plant(s) per crop over a full "
+            "growing season. Actual yields vary with care, variety, pot size and "
+            "weather. Ornamental/companion plants contribute no grocery value."
+        ),
+    }
+
+
+def compute_pest_advisory(
+    selected_plants: list[dict[str, Any]],
+    monthly_profile: list[dict[str, Any]] | None = None,
+    season: str | None = None,
+    greenhouse: bool = False,
+    latitude: float | None = None,
+) -> dict[str, Any]:
+    """Build a deterministic pest & disease advisory for the selected crops.
+
+    For every approved crop this surfaces its common pests/diseases (from the
+    botanical DB) together with an organic remedy, and cross-references which of
+    the *other* selected plants naturally help deter each pest (``deters`` field).
+    It also derives a climate note: warm and/or humid in-season conditions raise
+    fungal-disease and pest pressure.
+
+    Args:
+        selected_plants: Full plant records that the user approved.
+        monthly_profile: Optional 12-entry climate profile (avg max temp etc.).
+        season: Target growing season, used to pick the relevant months.
+        greenhouse: Whether crops are grown under cover (affects humidity note).
+        latitude: Location latitude; negative flips seasons to the South.
+
+    Returns:
+        Dict with ``risks`` (per-crop issues), ``protectiveAllies``,
+        ``climateNote`` and general ``tips``.
+    """
+    # Map a deterred-pest name -> list of selected ally plant names.
+    deterrents: dict[str, list[str]] = {}
+    protective_allies: list[dict[str, Any]] = []
+    for plant in selected_plants:
+        deters = plant.get("deters") or []
+        if deters:
+            protective_allies.append({"plant": plant["name"], "deters": list(deters)})
+            for pest_name in deters:
+                deterrents.setdefault(pest_name, []).append(plant["name"])
+
+    risks: list[dict[str, Any]] = []
+    for plant in selected_plants:
+        issues = []
+        for issue in plant.get("pests") or []:
+            allies = [a for a in deterrents.get(issue["name"], []) if a != plant["name"]]
+            issues.append(
+                {
+                    "name": issue["name"],
+                    "type": issue.get("type", "pest"),
+                    "remedy": issue.get("remedy", ""),
+                    "deterredBy": allies,
+                }
+            )
+        if issues:
+            risks.append({"plant": plant["name"], "issues": issues})
+
+    # Climate note: look at the in-season months (or all months) and flag warm
+    # and/or wet conditions, which raise fungal-disease and pest pressure.
+    climate_note = None
+    profile = monthly_profile or []
+    if profile:
+        season_months = set(resolve_season_months(season, latitude))
+        if season_months:
+            relevant = [
+                m for i, m in enumerate(profile, start=1) if i in season_months
+            ]
+        else:
+            relevant = profile
+        relevant = [m for m in relevant if m.get("averageMaxTemp") is not None]
+        if relevant:
+            avg_max = sum(m["averageMaxTemp"] for m in relevant) / len(relevant)
+            avg_precip = sum(
+                (m.get("totalPrecipitation") or 0) for m in relevant
+            ) / len(relevant)
+            warm = avg_max >= 24
+            wet = avg_precip >= 60
+            if warm and wet:
+                climate_note = (
+                    "Warm and humid in-season conditions strongly favour fungal "
+                    "diseases (blight, powdery mildew) and rapid pest build-up. "
+                    "Prioritise airflow, water at the base, and inspect weekly."
+                )
+            elif warm:
+                climate_note = (
+                    "Warm in-season temperatures speed up pest reproduction "
+                    "(aphids, spider mites). Inspect undersides of leaves weekly "
+                    "and act early."
+                )
+            elif wet:
+                climate_note = (
+                    "Wet in-season conditions raise fungal-disease risk. Improve "
+                    "airflow, avoid wetting foliage, and remove infected leaves "
+                    "promptly."
+                )
+    if greenhouse:
+        gh_note = (
+            "Under greenhouse cover, ventilate daily to curb humidity-driven "
+            "diseases and watch for whitefly and spider mites, which thrive in "
+            "still, warm air."
+        )
+        climate_note = f"{climate_note} {gh_note}" if climate_note else gh_note
+
+    tips = [
+        "Inspect plants weekly and act on the first signs — early action is far easier.",
+        "Encourage beneficial insects (ladybugs, lacewings) instead of broad-spectrum sprays.",
+        "Water at the base and keep foliage dry to limit fungal disease.",
+        "Rotate crop families each year to break pest and disease cycles.",
+    ]
+
+    return {
+        "risks": risks,
+        "protectiveAllies": protective_allies,
+        "climateNote": climate_note,
+        "tips": tips,
+    }
+
+
 def compute_companionship(selected_plants: list[dict[str, Any]]) -> dict[str, Any]:
     """Deterministically derive companion-planting relationships for a set.
 

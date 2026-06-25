@@ -40,6 +40,8 @@ from agents import (
     build_initial_message,
     build_planting_schedule,
     compute_companionship,
+    compute_pest_advisory,
+    compute_yield_estimate,
     empty_calendar,
     generate_calendar,
     root_agent,
@@ -708,6 +710,14 @@ async def _assemble_completed(
         selected, season=season, greenhouse=greenhouse, latitude=latitude
     )
     companionship = compute_companionship(selected)
+    yield_estimate = compute_yield_estimate(selected)
+    pest_advisory = compute_pest_advisory(
+        selected,
+        monthly_profile=monthly_profile,
+        season=season,
+        greenhouse=greenhouse,
+        latitude=latitude,
+    )
     proposed_ids = (captured.get("confirmation") or {}).get("proposedPlantIds", [])
     final_ids = [p["id"] for p in selected]
     coordinates = climate.get("coordinates") or {}
@@ -729,6 +739,8 @@ async def _assemble_completed(
         "compatiblePlants": compatible,
         "selectedPlants": selected,
         "companionship": companionship,
+        "yieldEstimate": yield_estimate,
+        "pestAdvisory": pest_advisory,
         "monthlyCalendar": monthly_calendar,
         "plantingSchedule": planting_schedule,
         "season": season,

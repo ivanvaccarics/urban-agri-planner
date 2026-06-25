@@ -228,6 +228,36 @@ function downloadPDF(planResult) {
     y = doc.lastAutoTable.finalY + 18;
   }
 
+  // --- Estimated harvest & savings -----------------------------------------
+  const yieldEst = planResult.yieldEstimate || {};
+  const yieldCrops = yieldEst.crops || [];
+  if (yieldCrops.length > 0) {
+    autoTable(doc, {
+      startY: y,
+      head: [["Crop", "Est. harvest", "Grocery value"]],
+      body: yieldCrops.map((c) => [
+        c.plant,
+        c.ornamental ? "companion / ornamental" : `${c.yieldKg} kg`,
+        c.ornamental ? "—" : `EUR ${c.valueEur}`,
+      ]),
+      foot: [["Total", `${yieldEst.totalYieldKg} kg`, `EUR ${yieldEst.totalValueEur}`]],
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
+      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
+      footStyles: { fillColor: [235, 240, 232], textColor: PDF_DARK, fontStyle: "bold" },
+      columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+    if (yieldEst.assumption) {
+      doc.setFontSize(8);
+      doc.setTextColor(...PDF_MUTED);
+      const lines = doc.splitTextToSize(yieldEst.assumption, pageW - margin * 2);
+      doc.text(lines, margin, y);
+      y += lines.length * 10 + 12;
+    }
+  }
+
   // --- Companion planting ---------------------------------------------------
   const comp = planResult.companionship || {};
   const compRows = [];
@@ -246,6 +276,47 @@ function downloadPDF(planResult) {
       styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
       headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
       columnStyles: { 0: { cellWidth: 70, fontStyle: "bold" }, 1: { cellWidth: 120 } },
+    });
+    y = doc.lastAutoTable.finalY + 18;
+  }
+
+  // --- Pest & disease advisory ---------------------------------------------
+  const advisory = planResult.pestAdvisory || {};
+  const pestRows = [];
+  (advisory.risks || []).forEach((risk) => {
+    (risk.issues || []).forEach((issue, i) => {
+      pestRows.push([
+        i === 0 ? risk.plant : "",
+        `${issue.name} (${issue.type})`,
+        issue.remedy || "",
+        (issue.deterredBy || []).join(", ") || "—",
+      ]);
+    });
+  });
+  if (pestRows.length > 0) {
+    if (advisory.climateNote) {
+      doc.setFontSize(9);
+      doc.setTextColor(...PDF_DARK);
+      const noteLines = doc.splitTextToSize(
+        `Climate note: ${advisory.climateNote}`,
+        pageW - margin * 2
+      );
+      doc.text(noteLines, margin, y);
+      y += noteLines.length * 11 + 8;
+    }
+    autoTable(doc, {
+      startY: y,
+      head: [["Crop", "Issue", "Organic remedy", "Helped by"]],
+      body: pestRows,
+      theme: "grid",
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 8.5, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
+      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
+      columnStyles: {
+        0: { cellWidth: 70, fontStyle: "bold" },
+        1: { cellWidth: 95 },
+        3: { cellWidth: 80, textColor: PDF_MUTED, fontSize: 8 },
+      },
     });
     y = doc.lastAutoTable.finalY + 18;
   }
@@ -284,6 +355,36 @@ function downloadPDF(planResult) {
 
   const slug = place.replace(/\s+/g, "-").toLowerCase() || "plan";
   doc.save(`agri-plan-${slug}.pdf`);
+}
+
+// Dependency-free interactive map: an OpenStreetMap embed centred on the
+// geocoded coordinates with a marker. No API key or extra library required.
+function LocationMap({ coordinates }) {
+  const lat = coordinates?.latitude;
+  const lon = coordinates?.longitude;
+  if (lat == null || lon == null) return null;
+  const d = 0.04;
+  const bbox = `${lon - d},${lat - d},${lon + d},${lat + d}`;
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+  const link = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=13/${lat}/${lon}`;
+  return (
+    <div className="location-map">
+      <iframe
+        title="Location map"
+        className="location-map-frame"
+        src={src}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      <div className="location-map-meta">
+        <span>
+          <span className="material-symbols" style={{ fontSize: "16px", verticalAlign: "-3px" }}>my_location</span>
+          &nbsp;{lat.toFixed(4)}, {lon.toFixed(4)}
+        </span>
+        <a href={link} target="_blank" rel="noreferrer">View larger map ↗</a>
+      </div>
+    </div>
+  );
 }
 
 // Lightweight dependency-free network graph of companion / antagonist links.
@@ -914,6 +1015,8 @@ function App() {
                 </p>
               )}
 
+              <LocationMap coordinates={planResult.coordinates} />
+
               {planResult.frostDates && (
                 <div className="frost-row">
                   <div className="frost-box">
@@ -1027,6 +1130,55 @@ function App() {
               </div>
             </div>
 
+            {/* Estimated harvest & grocery savings */}
+            {planResult.yieldEstimate && (planResult.yieldEstimate.crops || []).length > 0 && (
+              <div className="glass-card">
+                <h2 className="card-title">
+                  <span className="material-symbols">savings</span> Harvest &amp; Savings
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
+                  Estimated full-season harvest for your selection and what buying the
+                  same produce would cost.
+                </p>
+
+                <div className="yield-totals">
+                  <div className="yield-total-card">
+                    <span className="material-symbols yt-icon" style={{ color: "#4a8c3d" }}>nutrition</span>
+                    <div>
+                      <div className="yt-value">{planResult.yieldEstimate.totalYieldKg} kg</div>
+                      <div className="yt-label">Estimated harvest</div>
+                    </div>
+                  </div>
+                  <div className="yield-total-card">
+                    <span className="material-symbols yt-icon" style={{ color: "#b06a16" }}>savings</span>
+                    <div>
+                      <div className="yt-value">€{planResult.yieldEstimate.totalValueEur}</div>
+                      <div className="yt-label">Grocery value / year</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="yield-list">
+                  {(planResult.yieldEstimate.crops || []).map((row, idx) => (
+                    <div key={idx} className="yield-row">
+                      <span className="yield-name">{row.plant}</span>
+                      {row.ornamental ? (
+                        <span className="yield-meta" style={{ color: "var(--text-muted)" }}>
+                          companion / ornamental
+                        </span>
+                      ) : (
+                        <span className="yield-meta">
+                          {row.yieldKg} kg · €{row.valueEur}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="yield-assumption">{planResult.yieldEstimate.assumption}</p>
+              </div>
+            )}
+
             {/* Companion planting & suggestions */}
             <div className="glass-card">
               <h2 className="card-title">
@@ -1099,6 +1251,69 @@ function App() {
               </div>
               )}
             </div>
+
+            {/* Pest & disease advisory */}
+            {planResult.pestAdvisory && (planResult.pestAdvisory.risks || []).length > 0 && (
+              <div className="glass-card">
+                <h2 className="card-title">
+                  <span className="material-symbols">pest_control</span> Pest &amp; Disease Advisor
+                </h2>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
+                  Common issues for your crops, with organic remedies — plus which of
+                  your plants naturally help keep them in check.
+                </p>
+
+                {planResult.pestAdvisory.climateNote && (
+                  <div className="pest-climate-note">
+                    <span className="material-symbols">thermostat</span>
+                    <p>{planResult.pestAdvisory.climateNote}</p>
+                  </div>
+                )}
+
+                <div className="pest-list">
+                  {planResult.pestAdvisory.risks.map((risk, idx) => (
+                    <div key={idx} className="pest-crop">
+                      <div className="pest-crop-name">{risk.plant}</div>
+                      {risk.issues.map((issue, j) => (
+                        <div key={j} className="pest-issue">
+                          <div className="pest-issue-head">
+                            <span className={`pest-tag ${issue.type}`}>{issue.type}</span>
+                            <span className="pest-issue-name">{issue.name}</span>
+                          </div>
+                          <p className="pest-remedy">{issue.remedy}</p>
+                          {issue.deterredBy.length > 0 && (
+                            <div className="pest-allies">
+                              <span className="material-symbols" style={{ fontSize: "16px", color: "var(--new-leaf)", verticalAlign: "-3px" }}>shield</span>
+                              &nbsp;Helped by:&nbsp;
+                              {issue.deterredBy.map((ally, k) => (
+                                <span key={k} className="pest-ally-chip">{ally}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                {(planResult.pestAdvisory.protectiveAllies || []).length > 0 && (
+                  <div className="pest-allies-summary">
+                    <strong>Your protective allies:</strong>{" "}
+                    {planResult.pestAdvisory.protectiveAllies
+                      .map((a) => `${a.plant} (${a.deters.join(", ")})`)
+                      .join(" · ")}
+                  </div>
+                )}
+
+                {(planResult.pestAdvisory.tips || []).length > 0 && (
+                  <ul className="pest-tips">
+                    {planResult.pestAdvisory.tips.map((tip, idx) => (
+                      <li key={idx}>{tip}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Monthly Calendar Timeline */}
