@@ -1,490 +1,160 @@
 import React, { useState, useEffect, useRef } from "react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import { downloadICS, downloadPDF } from "./lib/exporters";
+import { LocationMap, CompanionGraph, YearRibbon } from "./components/viz";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5001";
 
-const MONTH_TO_NUM = {
-  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
-  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+const EXPOSURES = [
+  ["South", "Full sun, all day"],
+  ["South-East", "Sun until early afternoon"],
+  ["South-West", "Sun from midday on"],
+  ["East", "Morning sun"],
+  ["West", "Afternoon sun"],
+  ["North-East", "Soft morning light"],
+  ["North-West", "Soft evening light"],
+  ["North", "Mostly shade"],
+];
+
+const SEASONS = [
+  ["Spring", "Mar–May"],
+  ["Summer", "Jun–Aug"],
+  ["Autumn", "Sep–Nov"],
+  ["Winter", "Dec–Feb"],
+];
+
+// --------------------------------------------------------------------------
+// Small presentational helpers
+// --------------------------------------------------------------------------
+function Icon({ name, className = "" }) {
+  return <span className={`material-symbols ${className}`}>{name}</span>;
+}
+
+const AGENT_LABEL = {
+  GeoClimateAgent: "Geo-Climate",
+  PlannerAgent: "Planner",
+  ReviewerAgent: "Reviewer",
+  AdvisorAgent: "Advisor",
+  CropPlanningPipeline: "Pipeline",
+  user: "You",
 };
 
-// Build a downloadable .ics calendar from the monthly cultivation plan.
-// Each month's actions become an all-day event on the 1st of that month,
-// so the user can import the full growing cycle into any calendar app.
-function buildICS(planResult) {
-  const pad = (n) => String(n).padStart(2, "0");
-  const year = new Date().getFullYear();
-  const dtstamp =
-    new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const esc = (s) =>
-    String(s || "")
-      .replace(/\\/g, "\\\\")
-      .replace(/;/g, "\\;")
-      .replace(/,/g, "\\,")
-      .replace(/\n/g, "\\n");
+function stepIcon(type) {
+  switch (type) {
+    case "tool_call": return "bolt";
+    case "tool_result": return "task_alt";
+    case "checkpoint": return "front_hand";
+    case "message": return "chat";
+    default: return "arrow_right";
+  }
+}
 
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Urban Agri-Planner//Cultivation Calendar//EN",
-    "CALSCALE:GREGORIAN",
+function AgentActivity({ steps }) {
+  if (!steps || steps.length === 0) return null;
+  return (
+    <ol className="activity">
+      {steps.map((step, idx) => (
+        <li key={idx} className={`activity__row${step.type === "checkpoint" ? " is-checkpoint" : ""}`}>
+          <span className="activity__agent">{AGENT_LABEL[step.agent] || step.agent || "Agent"}</span>
+          <Icon name={stepIcon(step.type)} className="activity__icon" />
+          <span className="activity__msg">
+            {step.message}
+            {step.tool && <span className="activity__tool mono">{step.tool}</span>}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Stepper({ step }) {
+  const steps = [
+    ["Your space", "tune"],
+    ["Review & approve", "front_hand"],
+    ["Your plan", "calendar_month"],
   ];
-
-  (planResult.monthlyCalendar || []).forEach((monthData) => {
-    const key = String(monthData.month || "").slice(0, 3).toLowerCase();
-    const monthNum = MONTH_TO_NUM[key];
-    if (!monthNum || !monthData.actions || monthData.actions.length === 0) return;
-    const start = `${year}${pad(monthNum)}01`;
-    const endDate = new Date(year, monthNum, 2); // 1st of next month for DTEND
-    const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(
-      endDate.getDate()
-    )}`;
-    monthData.actions.forEach((act, i) => {
-      lines.push(
-        "BEGIN:VEVENT",
-        `UID:${monthNum}-${i}-${act.plant || "plant"}@urbanagriplanner`,
-        `DTSTAMP:${dtstamp}`,
-        `DTSTART;VALUE=DATE:${start}`,
-        `DTEND;VALUE=DATE:${end}`,
-        `SUMMARY:${esc(`${act.type}: ${act.plant}`)}`,
-        `DESCRIPTION:${esc(act.text)}`,
-        "END:VEVENT"
-      );
-    });
-  });
-
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-}
-
-function downloadICS(planResult) {
-  const ics = buildICS(planResult);
-  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const place = (planResult.location || "plan").split(",")[0].trim().replace(/\s+/g, "-");
-  link.href = url;
-  link.download = `agri-calendar-${place || "plan"}.ics`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-// ---------------------------------------------------------------------------
-// PDF report template
-// ---------------------------------------------------------------------------
-// Branded A4 cultivation-plan document built with jsPDF + autoTable.
-// Layout: title band → location/climate summary → frost & watering → selected
-// crops → planting schedule → companion planting → monthly calendar, with a
-// running footer (generator credit + page numbers). This downloads a real .pdf
-// file instead of opening the browser print dialog.
-const PDF_GREEN = [74, 140, 61]; // brand green
-const PDF_DARK = [40, 54, 38];
-const PDF_MUTED = [120, 130, 120];
-
-function downloadPDF(planResult) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const margin = 40;
-  const contentW = pageW - margin * 2;
-  const place = (planResult.location || "Cultivation Plan").split(",")[0].trim();
-  const generated = new Date().toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  // --- Title band -----------------------------------------------------------
-  doc.setFillColor(...PDF_GREEN);
-  doc.rect(0, 0, pageW, 70, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("Urban Agri-Planner", margin, 34);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.text("AI-generated cultivation plan", margin, 52);
-  doc.setFontSize(9);
-  doc.text(`Generated ${generated}`, pageW - margin, 34, { align: "right" });
-
-  let y = 96;
-
-  // --- Location & climate summary ------------------------------------------
-  doc.setTextColor(...PDF_DARK);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text(place, margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...PDF_MUTED);
-  if (planResult.location) {
-    doc.text(doc.splitTextToSize(planResult.location, contentW), margin, y);
-    y += 14;
-  }
-  if (planResult.coordinates) {
-    const c = planResult.coordinates;
-    const lat = c.latitude ?? c.lat;
-    const lon = c.longitude ?? c.lon;
-    if (lat != null && lon != null) {
-      doc.text(`Coordinates: ${Number(lat).toFixed(4)}, ${Number(lon).toFixed(4)}`, margin, y);
-      y += 14;
-    }
-  }
-  y += 6;
-
-  // Climate fact chips, rendered as a compact 2-column key/value table.
-  const climateRows = [];
-  if (planResult.estimatedHardinessZone)
-    climateRows.push(["USDA hardiness zone", String(planResult.estimatedHardinessZone)]);
-  if (planResult.absoluteMinTempYear != null)
-    climateRows.push(["Coldest recorded temp", `${planResult.absoluteMinTempYear} °C`]);
-  if (planResult.climateYears)
-    climateRows.push([
-      "Climate basis",
-      `${planResult.climateYears.count}-year average (${planResult.climateYears.start}–${planResult.climateYears.end})`,
-    ]);
-  if (planResult.frostDates) {
-    const f = planResult.frostDates;
-    if (f.lastSpringFrost) climateRows.push(["Last spring frost", f.lastSpringFrost]);
-    if (f.firstAutumnFrost) climateRows.push(["First autumn frost", f.firstAutumnFrost]);
-    if (f.frostFreeDays != null) climateRows.push(["Frost-free days", `${f.frostFreeDays}`]);
-  }
-  if (climateRows.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Climate", ""]],
-      body: climateRows,
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 160, fontStyle: "bold" } },
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  }
-
-  // --- Watering advice ------------------------------------------------------
-  if (planResult.wateringAdvice && planResult.wateringAdvice.advice) {
-    const w = planResult.wateringAdvice;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...PDF_DARK);
-    doc.text("7-day watering advice", margin, y);
-    y += 14;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...PDF_MUTED);
-    const wlines = doc.splitTextToSize(w.advice, contentW);
-    doc.text(wlines, margin, y);
-    y += wlines.length * 12 + 4;
-    const meta = [
-      w.totalPrecipitationMm != null ? `${w.totalPrecipitationMm} mm forecast` : null,
-      w.rainyDays != null ? `${w.rainyDays} rainy day(s)` : null,
-      w.avgMaxTempC != null ? `avg max ${w.avgMaxTempC} °C` : null,
-    ].filter(Boolean).join("  ·  ");
-    if (meta) {
-      doc.text(meta, margin, y);
-      y += 16;
-    }
-  }
-
-  // --- Selected crops -------------------------------------------------------
-  const selected = planResult.selectedPlants || [];
-  if (selected.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Selected crop", "Scientific name", "Min sun (h)"]],
-      body: selected.map((p) => [p.name, p.scientificName || "—", String(p.sunlightHoursMin ?? "—")]),
-      theme: "striped",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 1: { fontStyle: "italic" }, 2: { halign: "center", cellWidth: 80 } },
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  }
-
-  // --- Planting schedule ----------------------------------------------------
-  const schedule = planResult.plantingSchedule || [];
-  if (schedule.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Crop", "Put in field", "Harvest", "Notes"]],
-      body: schedule.map((r) => [
-        r.plant + (r.inSeason ? "  (in season)" : ""),
-        r.putInField || "—",
-        r.harvest || "—",
-        r.note || "",
-      ]),
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 3: { textColor: PDF_MUTED, fontSize: 8 } },
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  }
-
-  // --- Estimated harvest & savings -----------------------------------------
-  const yieldEst = planResult.yieldEstimate || {};
-  const yieldCrops = yieldEst.crops || [];
-  if (yieldCrops.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Crop", "Est. harvest", "Grocery value"]],
-      body: yieldCrops.map((c) => [
-        c.plant,
-        c.ornamental ? "companion / ornamental" : `${c.yieldKg} kg`,
-        c.ornamental ? "—" : `EUR ${c.valueEur}`,
-      ]),
-      foot: [["Total", `${yieldEst.totalYieldKg} kg`, `EUR ${yieldEst.totalValueEur}`]],
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      footStyles: { fillColor: [235, 240, 232], textColor: PDF_DARK, fontStyle: "bold" },
-      columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
-    });
-    y = doc.lastAutoTable.finalY + 6;
-    if (yieldEst.assumption) {
-      doc.setFontSize(8);
-      doc.setTextColor(...PDF_MUTED);
-      const lines = doc.splitTextToSize(yieldEst.assumption, pageW - margin * 2);
-      doc.text(lines, margin, y);
-      y += lines.length * 10 + 12;
-    }
-  }
-
-  // --- Companion planting ---------------------------------------------------
-  const comp = planResult.companionship || {};
-  const compRows = [];
-  (comp.companions || []).forEach((c) =>
-    compRows.push(["Good pair", `${c.plants[0]} + ${c.plants[1]}`, c.reason || ""]));
-  (comp.antagonists || []).forEach((a) =>
-    compRows.push(["Conflict", `${a.plants[0]} & ${a.plants[1]}`, a.reason || ""]));
-  (comp.warnings || []).forEach((w) => compRows.push(["Note", "—", w]));
-  if (compRows.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Type", "Plants", "Reason"]],
-      body: compRows,
-      theme: "striped",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 9, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 70, fontStyle: "bold" }, 1: { cellWidth: 120 } },
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  }
-
-  // --- Pest & disease advisory ---------------------------------------------
-  const advisory = planResult.pestAdvisory || {};
-  const pestRows = [];
-  (advisory.risks || []).forEach((risk) => {
-    (risk.issues || []).forEach((issue, i) => {
-      pestRows.push([
-        i === 0 ? risk.plant : "",
-        `${issue.name} (${issue.type})`,
-        issue.remedy || "",
-        (issue.deterredBy || []).join(", ") || "—",
-      ]);
-    });
-  });
-  if (pestRows.length > 0) {
-    if (advisory.climateNote) {
-      doc.setFontSize(9);
-      doc.setTextColor(...PDF_DARK);
-      const noteLines = doc.splitTextToSize(
-        `Climate note: ${advisory.climateNote}`,
-        pageW - margin * 2
-      );
-      doc.text(noteLines, margin, y);
-      y += noteLines.length * 11 + 8;
-    }
-    autoTable(doc, {
-      startY: y,
-      head: [["Crop", "Issue", "Organic remedy", "Helped by"]],
-      body: pestRows,
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8.5, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: {
-        0: { cellWidth: 70, fontStyle: "bold" },
-        1: { cellWidth: 95 },
-        3: { cellWidth: 80, textColor: PDF_MUTED, fontSize: 8 },
-      },
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  }
-
-  // --- Monthly cultivation calendar ----------------------------------------
-  const months = planResult.monthlyCalendar || [];
-  if (months.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      head: [["Month", "Temp (min/max)", "Activities"]],
-      body: months.map((m) => [
-        m.month + (m.inSeason ? "  ★" : ""),
-        `${m.averageMinTemp}°C / ${m.averageMaxTemp}°C`,
-        (m.actions && m.actions.length > 0
-          ? m.actions.map((a) => `${a.type} — ${a.plant}: ${a.text}`).join("\n")
-          : "No activities planned."),
-      ]),
-      theme: "grid",
-      margin: { left: margin, right: margin },
-      styles: { fontSize: 8.5, cellPadding: 4, textColor: PDF_DARK, valign: "top" },
-      headStyles: { fillColor: PDF_GREEN, textColor: 255, fontStyle: "bold" },
-      columnStyles: { 0: { cellWidth: 90, fontStyle: "bold" }, 1: { cellWidth: 100 } },
-    });
-  }
-
-  // --- Footer on every page -------------------------------------------------
-  const pageCount = doc.internal.getNumberOfPages();
-  const pageH = doc.internal.pageSize.getHeight();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(...PDF_MUTED);
-    doc.text("Generated by Urban Agri-Planner", margin, pageH - 20);
-    doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 20, { align: "right" });
-  }
-
-  const slug = place.replace(/\s+/g, "-").toLowerCase() || "plan";
-  doc.save(`agri-plan-${slug}.pdf`);
-}
-
-// Dependency-free interactive map: an OpenStreetMap embed centred on the
-// geocoded coordinates with a marker. No API key or extra library required.
-function LocationMap({ coordinates }) {
-  const lat = coordinates?.latitude;
-  const lon = coordinates?.longitude;
-  if (lat == null || lon == null) return null;
-  const d = 0.04;
-  const bbox = `${lon - d},${lat - d},${lon + d},${lat + d}`;
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
-  const link = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=13/${lat}/${lon}`;
   return (
-    <div className="location-map">
-      <iframe
-        title="Location map"
-        className="location-map-frame"
-        src={src}
-        loading="lazy"
-        referrerPolicy="no-referrer-when-downgrade"
-      />
-      <div className="location-map-meta">
-        <span>
-          <span className="material-symbols" style={{ fontSize: "16px", verticalAlign: "-3px" }}>my_location</span>
-          &nbsp;{lat.toFixed(4)}, {lon.toFixed(4)}
+    <nav className="stepper" aria-label="Progress">
+      {steps.map(([label], i) => {
+        const n = i + 1;
+        const state = n < step ? "done" : n === step ? "current" : "todo";
+        return (
+          <React.Fragment key={label}>
+            <div className={`stepper__step is-${state}`} aria-current={n === step ? "step" : undefined}>
+              <span className="stepper__dot">
+                {state === "done" ? <Icon name="check" /> : <span>{n}</span>}
+              </span>
+              <span className="stepper__label">{label}</span>
+            </div>
+            {n < steps.length && <span className={`stepper__bar${n < step ? " is-filled" : ""}`} />}
+          </React.Fragment>
+        );
+      })}
+    </nav>
+  );
+}
+
+function CropCard({ plant, selected, onToggle, proposed, readonly }) {
+  return (
+    <button
+      type="button"
+      className={`cropcard${selected ? " is-selected" : ""}${readonly ? " is-readonly" : ""}`}
+      onClick={readonly ? undefined : onToggle}
+      aria-pressed={readonly ? undefined : selected}
+      disabled={readonly}
+    >
+      {!readonly && (
+        <span className="cropcard__check">
+          <Icon name={selected ? "check_circle" : "radio_button_unchecked"} />
         </span>
-        <a href={link} target="_blank" rel="noreferrer">View larger map ↗</a>
-      </div>
-    </div>
+      )}
+      {proposed && <span className="cropcard__badge">Suggested</span>}
+      <span className="cropcard__name">{plant.name}</span>
+      <span className="cropcard__sci">{plant.scientificName}</span>
+      <span className="cropcard__meta">
+        <span className="mono"><Icon name="wb_sunny" /> {plant.sunlightHoursMin}h</span>
+        {plant.difficulty && <span className="mono"><Icon name="fitness_center" /> {plant.difficulty}</span>}
+        {plant.watering && <span className="mono"><Icon name="water_drop" /> {plant.watering}</span>}
+      </span>
+    </button>
   );
 }
 
-// Lightweight dependency-free network graph of companion / antagonist links.
-// Plants are placed on a circle; green edges = good companions, red = antagonists.
-function CompanionGraph({ selectedPlants, companionship }) {
-  const plants = selectedPlants || [];
-  const size = 360;
-  const center = size / 2;
-  const radius = plants.length > 1 ? size / 2 - 70 : 0;
-
-  if (plants.length === 0) {
-    return (
-      <p className="no-actions text-center">No crops selected to graph.</p>
-    );
-  }
-
-  const positions = {};
-  plants.forEach((p, i) => {
-    const angle = (2 * Math.PI * i) / plants.length - Math.PI / 2;
-    positions[p.name] = {
-      x: center + radius * Math.cos(angle),
-      y: center + radius * Math.sin(angle),
-    };
-  });
-
-  const edge = (pair, type, idx) => {
-    const a = positions[pair[0]];
-    const b = positions[pair[1]];
-    if (!a || !b) return null;
-    return (
-      <line
-        key={`${type}-${idx}`}
-        x1={a.x}
-        y1={a.y}
-        x2={b.x}
-        y2={b.y}
-        className={`graph-edge ${type}`}
-      />
-    );
-  };
-
-  return (
-    <div className="companion-graph">
-      <svg viewBox={`0 0 ${size} ${size}`} className="companion-graph-svg" role="img" aria-label="Companion planting graph">
-        {(companionship.companions || []).map((c, i) => edge(c.plants, "good", i))}
-        {(companionship.antagonists || []).map((a, i) => edge(a.plants, "bad", i))}
-        {plants.map((p) => {
-          const pos = positions[p.name];
-          return (
-            <g key={p.id} className="graph-node-group">
-              <circle cx={pos.x} cy={pos.y} r={26} className="graph-node" />
-              <text x={pos.x} y={pos.y + 42} className="graph-node-label" textAnchor="middle">
-                {p.name}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="graph-legend">
-        <span className="legend-item"><span className="legend-swatch good" /> Good companions</span>
-        <span className="legend-item"><span className="legend-swatch bad" /> Avoid together</span>
-      </div>
-    </div>
-  );
-}
-
+// --------------------------------------------------------------------------
+// App
+// --------------------------------------------------------------------------
 function App() {
   const [address, setAddress] = useState("Via Roma 10, Milan, Italy");
   const [sunlightHours, setSunlightHours] = useState(6);
   const [exposure, setExposure] = useState("South");
   const [season, setSeason] = useState("Spring");
   const [greenhouse, setGreenhouse] = useState(false);
-  const [loading, setLoading] = useState(false);     // POST /api/plan in progress
-  const [confirming, setConfirming] = useState(false); // POST /api/plan/confirm in progress
+  const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState(null);
 
-  // Address autocomplete (debounced REST proxy to Nominatim)
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const skipNextFetch = useRef(false);
 
-  // Workflow states
   const [displayedSteps, setDisplayedSteps] = useState([]);
-  const [pendingConfirmation, setPendingConfirmation] = useState(null); // confirmation_required payload
-  const [checkpointSelection, setCheckpointSelection] = useState([]);   // plant ids the human keeps at the gate
-  const [planResult, setPlanResult] = useState(null);                   // completed plan
-  const [rejection, setRejection] = useState(null);                     // rejected payload
-  const [companionView, setCompanionView] = useState("list");           // "list" | "graph"
-  const [chatMessages, setChatMessages] = useState([]);                 // {role, text}
+  const [pendingConfirmation, setPendingConfirmation] = useState(null);
+  const [checkpointSelection, setCheckpointSelection] = useState([]);
+  const [planResult, setPlanResult] = useState(null);
+  const [rejection, setRejection] = useState(null);
+  const [companionView, setCompanionView] = useState("list");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const chatWindowRef = useRef(null);
 
-  // Animate the real agent steps into the activity log for an agentic feel.
   const animateSteps = async (steps) => {
     setDisplayedSteps([]);
     for (let i = 0; i < steps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await new Promise((r) => setTimeout(r, 380));
       setDisplayedSteps((prev) => [...prev, steps[i]]);
     }
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((r) => setTimeout(r, 200));
   };
 
   const resetWorkflow = () => {
@@ -495,9 +165,20 @@ function App() {
     setError(null);
     setChatMessages([]);
     setChatInput("");
+    setActiveTab("overview");
   };
 
-  // Send a follow-up question about the finalised plan to the advisor agent.
+  const startOver = () => {
+    resetWorkflow();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (chatWindowRef.current) {
+      chatWindowRef.current.scrollTop = chatWindowRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatLoading]);
+
   const sendChatMessage = async () => {
     const question = chatInput.trim();
     if (!question || chatLoading || !planResult?.sessionId) return;
@@ -511,9 +192,7 @@ function App() {
         body: JSON.stringify({ sessionId: planResult.sessionId, message: question }),
       });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || "The advisor could not answer.");
-      }
+      if (!response.ok) throw new Error(data.detail || "The advisor could not answer.");
       setChatMessages((prev) => [
         ...prev,
         { role: "advisor", text: data.reply, steps: data.steps || [] },
@@ -521,15 +200,14 @@ function App() {
     } catch (err) {
       setChatMessages((prev) => [
         ...prev,
-        { role: "advisor", text: `⚠️ ${err.message}`, error: true },
+        { role: "advisor", text: err.message, error: true },
       ]);
     } finally {
       setChatLoading(false);
     }
   };
 
-  // Debounced address autocomplete. Queries the backend suggestions proxy
-  // (a direct Nominatim REST call) ~350ms after the user stops typing.
+  // Debounced address autocomplete via the backend Nominatim proxy.
   useEffect(() => {
     if (skipNextFetch.current) {
       skipNextFetch.current = false;
@@ -542,31 +220,27 @@ function App() {
     }
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/address/suggestions?q=${encodeURIComponent(query)}`
-        );
+        const res = await fetch(`${API_BASE}/api/address/suggestions?q=${encodeURIComponent(query)}`);
         if (!res.ok) return;
         const data = await res.json();
         setSuggestions(data.suggestions || []);
       } catch {
-        /* autocomplete is best-effort; ignore network errors */
+        /* best-effort */
       }
     }, 350);
     return () => clearTimeout(handle);
   }, [address]);
 
-  const handleSelectSuggestion = (suggestion) => {
-    skipNextFetch.current = true; // don't re-query for the value we just set
-    setAddress(suggestion.displayName);
+  const handleSelectSuggestion = (s) => {
+    skipNextFetch.current = true;
+    setAddress(s.displayName);
     setSuggestions([]);
     setShowSuggestions(false);
   };
 
-  // Step 1 — run the pipeline up to the human-in-the-loop checkpoint.
   const handleGeneratePlan = async () => {
     setLoading(true);
     resetWorkflow();
-
     try {
       const response = await fetch(`${API_BASE}/api/plan`, {
         method: "POST",
@@ -579,21 +253,15 @@ function App() {
           greenhouse,
         }),
       });
-
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.detail || data.error || "Unable to compute the cultivation plan.");
       }
-
-      if (data.steps && data.steps.length > 0) {
-        await animateSteps(data.steps);
-      }
-
+      if (data.steps && data.steps.length > 0) await animateSteps(data.steps);
       if (data.status === "confirmation_required") {
         setPendingConfirmation(data);
         setCheckpointSelection(data.proposedPlantIds || []);
       } else if (data.status === "completed") {
-        // The pipeline finished without a checkpoint (e.g. no plants matched).
         setPlanResult(data);
       } else {
         throw new Error("Unexpected response from the server.");
@@ -606,12 +274,10 @@ function App() {
     }
   };
 
-  // Step 2 — resume the paused agent session with the human's decision.
   const handleConfirm = async (approved) => {
     if (!pendingConfirmation) return;
     setConfirming(true);
     setError(null);
-
     try {
       const response = await fetch(`${API_BASE}/api/plan/confirm`, {
         method: "POST",
@@ -623,19 +289,14 @@ function App() {
           plantIds: approved ? checkpointSelection : null,
         }),
       });
-
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || data.error || "Error during confirmation.");
-      }
-
-      if (data.steps && data.steps.length > 0) {
-        setDisplayedSteps(data.steps); // full log including post-approval steps
-      }
-
+      if (!response.ok) throw new Error(data.detail || data.error || "Error during confirmation.");
+      if (data.steps && data.steps.length > 0) setDisplayedSteps(data.steps);
       if (data.status === "completed") {
         setPlanResult(data);
         setPendingConfirmation(null);
+        setActiveTab("overview");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else if (data.status === "rejected") {
         setRejection(data);
         setPendingConfirmation(null);
@@ -650,7 +311,6 @@ function App() {
     }
   };
 
-  // Toggle a plant in the checkpoint selection (no re-run; the human curates here).
   const toggleCheckpointPlant = (plantId) => {
     setCheckpointSelection((prev) =>
       prev.includes(plantId) ? prev.filter((id) => id !== plantId) : [...prev, plantId]
@@ -660,894 +320,675 @@ function App() {
   const sameSelection = (a, b) =>
     a.length === b.length && [...a].sort().join() === [...b].sort().join();
 
-  // Agent activity log helpers.
-  const agentLabel = (agent) => {
-    const map = {
-      GeoClimateAgent: "Geo-Climate",
-      PlannerAgent: "Planner",
-      CropPlanningPipeline: "Pipeline",
-      user: "User",
-    };
-    return map[agent] || agent || "Agent";
-  };
-
-  const badgeClass = (agent) => {
-    if (agent === "GeoClimateAgent") return "geoclima";
-    if (agent === "PlannerAgent") return "planner";
-    return "system";
-  };
-
-  const stepIcon = (type) => {
-    switch (type) {
-      case "tool_call": return "build";
-      case "tool_result": return "task_alt";
-      case "checkpoint": return "verified_user";
-      case "message": return "forum";
-      default: return "bolt";
-    }
-  };
-
-  const renderSteps = (steps) => (
-    <div className="agent-steps-box">
-      {steps.map((step, idx) => (
-        <div key={idx} className={`agent-step ${step.type === "checkpoint" ? "is-checkpoint" : ""}`}>
-          <span className={`agent-badge ${badgeClass(step.agent)}`}>{agentLabel(step.agent)}</span>
-          <span className="material-symbols step-icon">{stepIcon(step.type)}</span>
-          <span className="agent-message">
-            {step.message}
-            {step.tool && <span className="step-tool">{step.tool}</span>}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-
-  // Icon mapping helper
-  const getActionIcon = (type) => {
-    switch (type.toLowerCase()) {
-      case "sowing":
-        return <span className="material-symbols action-icon" style={{color: '#4a8c3d'}}>yard</span>;
-      case "protected sowing":
-        return <span className="material-symbols action-icon" style={{color: '#b07a1e'}}>roofing</span>;
-      case "maintenance":
-        return <span className="material-symbols action-icon" style={{color: '#4f8a45'}}>eco</span>;
-      case "protection":
-        return <span className="material-symbols action-icon" style={{color: '#c0403a'}}>umbrella</span>;
-      case "harvest":
-        return <span className="material-symbols action-icon" style={{color: '#b06a16'}}>nutrition</span>;
-      case "watering / shading":
-        return <span className="material-symbols action-icon" style={{color: '#1f93a3'}}>water_drop</span>;
-      default:
-        return <span className="material-symbols action-icon">info</span>;
-    }
-  };
+  const step = planResult ? 3 : pendingConfirmation || rejection ? 2 : 1;
+  const contextLocation = planResult?.location || pendingConfirmation?.location || null;
+  const contextZone = planResult?.estimatedHardinessZone || pendingConfirmation?.estimatedHardinessZone;
 
   return (
-    <div className="app-container">
-      <header>
-        <div className="header-eyebrow">Multi-Agent Planning System</div>
-        <h1>Urban <span className="accent-word">Agri</span>-Planner</h1>
-        <p>Location-aware cultivation plans for balconies and rooftops — built by AI agents that cross-reference climate history, hardiness zones, and the botanical needs of each crop.</p>
-      </header>
-
-      {/* Input panel */}
-      <section className="glass-card mb-4">
-        <div className="form-grid">
-          <div className="input-group input-group-wide">
-            <label htmlFor="address-input">Address or Location</label>
-            <div className="autocomplete-wrapper">
-              <input 
-                id="address-input"
-                type="text" 
-                className="input-field" 
-                value={address}
-                onChange={(e) => { setAddress(e.target.value); setShowSuggestions(true); }}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="e.g. Via Roma 10, Milan"
-                autoComplete="off"
-                disabled={loading}
-              />
-              {showSuggestions && suggestions.length > 0 && (
-                <ul className="suggestions-list">
-                  {suggestions.map((s, idx) => (
-                    <li
-                      key={idx}
-                      className="suggestion-item"
-                      onMouseDown={() => handleSelectSuggestion(s)}
-                    >
-                      <span className="material-symbols suggestion-icon">location_on</span>
-                      <span className="suggestion-text">{s.displayName}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="sunlight-input">Direct Sunlight (hours/day)</label>
-            <input 
-              id="sunlight-input"
-              type="number" 
-              className="input-field" 
-              min="0" 
-              max="24"
-              value={sunlightHours}
-              onChange={(e) => setSunlightHours(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="exposure-select">Balcony Exposure</label>
-            <select 
-              id="exposure-select"
-              className="input-field" 
-              value={exposure}
-              onChange={(e) => setExposure(e.target.value)}
-              disabled={loading}
-            >
-              <option value="South">South (Very sunny)</option>
-              <option value="East">East (Morning sun)</option>
-              <option value="West">West (Afternoon sun)</option>
-              <option value="North">North (Mostly shade)</option>
-              <option value="South-East">South-East</option>
-              <option value="South-West">South-West</option>
-              <option value="North-East">North-East</option>
-              <option value="North-West">North-West</option>
-            </select>
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="season-select">Growing Season</label>
-            <select
-              id="season-select"
-              className="input-field"
-              value={season}
-              onChange={(e) => setSeason(e.target.value)}
-              disabled={loading}
-            >
-              <option value="Spring">Spring (Mar–May)</option>
-              <option value="Summer">Summer (Jun–Aug)</option>
-              <option value="Autumn">Autumn (Sep–Nov)</option>
-              <option value="Winter">Winter (Dec–Feb)</option>
-            </select>
-          </div>
-
-          <div className="input-group input-group-wide">
-            <label>Growing Setup</label>
-            <div className="segmented" role="group" aria-label="Growing setup">
-              <button
-                type="button"
-                className={`seg ${!greenhouse ? "active" : ""}`}
-                onClick={() => setGreenhouse(false)}
-                disabled={loading}
-              >
-                <span className="material-symbols">wb_sunny</span> <span className="seg-label">Outdoor</span>
-              </button>
-              <button
-                type="button"
-                className={`seg ${greenhouse ? "active" : ""}`}
-                onClick={() => setGreenhouse(true)}
-                disabled={loading}
-              >
-                <span className="material-symbols">potted_plant</span> <span className="seg-label">Greenhouse</span>
-              </button>
-            </div>
-          </div>
+    <div className="app">
+      <header className="appbar">
+        <div className="appbar__brand">
+          <span className="appbar__mark" aria-hidden="true"><Icon name="potted_plant" /></span>
+          <span className="appbar__title">Urban Agri-Planner</span>
         </div>
 
-        <button 
-          id="generate-btn"
-          className="btn" 
-          onClick={handleGeneratePlan} 
-          disabled={loading || confirming || !!pendingConfirmation || !address}
-        >
-          <span className="material-symbols">psychology</span>
-          {loading ? "Processing..." : "Generate Cultivation Plan"}
+        {contextLocation && (
+          <div className="appbar__context">
+            <span className="ctx"><Icon name="location_on" />{contextLocation.split(",")[0]}</span>
+            {contextZone && <span className="ctx mono">Zone {contextZone}</span>}
+            {planResult?.season && <span className="ctx mono">{planResult.season}</span>}
+          </div>
+        )}
+
+        <div className="appbar__actions">
+          {planResult && (
+            <>
+              <button className="btn btn--ghost" onClick={() => downloadICS(planResult)}>
+                <Icon name="event" /> <span className="btn__label">.ics</span>
+              </button>
+              <button className="btn btn--ghost" onClick={() => downloadPDF(planResult)}>
+                <Icon name="picture_as_pdf" /> <span className="btn__label">PDF</span>
+              </button>
+            </>
+          )}
+          {(planResult || pendingConfirmation || rejection) && (
+            <button className="btn btn--primary" onClick={startOver}>
+              <Icon name="add" /> <span className="btn__label">New plan</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="shell">
+        <Stepper step={step} />
+
+        {/* ---- STEP 1: input ------------------------------------------------ */}
+        {step === 1 && !loading && (
+          <div className="intake">
+            <section className="intake__intro">
+              <p className="eyebrow mono">Multi-agent growing planner</p>
+              <h1 className="intake__headline">
+                Tell us about your balcony.<br />We'll plan the whole growing year.
+              </h1>
+              <p className="intake__sub">
+                AI agents cross-reference a decade of local climate, your light and exposure,
+                and the needs of 78 crops — then a reviewer critiques the picks before you approve them.
+              </p>
+              <ul className="intake__points">
+                <li><Icon name="public" /> Grounded in your address's real microclimate</li>
+                <li><Icon name="rate_review" /> Independently reviewed, approved by you</li>
+                <li><Icon name="savings" /> Harvest, savings and pest advice included</li>
+              </ul>
+            </section>
+
+            <section className="panel intake__form">
+              <div className="field">
+                <label htmlFor="address-input" className="field__label">Where is your space?</label>
+                <div className="autocomplete">
+                  <Icon name="search" className="field__icon" />
+                  <input
+                    id="address-input"
+                    type="text"
+                    className="control control--icon"
+                    value={address}
+                    onChange={(e) => { setAddress(e.target.value); setShowSuggestions(true); }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    placeholder="Street, city — e.g. Via Roma 10, Milan"
+                    autoComplete="off"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul className="suggestions">
+                      {suggestions.map((s, idx) => (
+                        <li key={idx} className="suggestions__item" onMouseDown={() => handleSelectSuggestion(s)}>
+                          <Icon name="location_on" />
+                          <span>{s.displayName}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <p className="field__hint">We use this to look up your climate and frost dates.</p>
+              </div>
+
+              <div className="field">
+                <div className="field__label-row">
+                  <label htmlFor="sun-input" className="field__label">How much direct sun?</label>
+                  <span className="field__value mono">{sunlightHours} h/day</span>
+                </div>
+                <input
+                  id="sun-input"
+                  type="range"
+                  className="slider"
+                  min="0" max="14" step="1"
+                  value={sunlightHours}
+                  onChange={(e) => setSunlightHours(e.target.value)}
+                />
+                <div className="slider__scale mono"><span>Shade</span><span>Part sun</span><span>Full sun</span></div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="exposure-select" className="field__label">Which way does it face?</label>
+                <select id="exposure-select" className="control" value={exposure} onChange={(e) => setExposure(e.target.value)}>
+                  {EXPOSURES.map(([val, hint]) => <option key={val} value={val}>{val} — {hint}</option>)}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="season-select" className="field__label">When do you want to start?</label>
+                <select id="season-select" className="control" value={season} onChange={(e) => setSeason(e.target.value)}>
+                  {SEASONS.map(([val, hint]) => <option key={val} value={val}>{val} ({hint})</option>)}
+                </select>
+              </div>
+
+              <div className="field">
+                <span className="field__label">Growing setup</span>
+                <div className="segmented" role="group" aria-label="Growing setup">
+                  <button type="button" className={`seg${!greenhouse ? " is-active" : ""}`} onClick={() => setGreenhouse(false)}>
+                    <Icon name="wb_sunny" /> Outdoor
+                  </button>
+                  <button type="button" className={`seg${greenhouse ? " is-active" : ""}`} onClick={() => setGreenhouse(true)}>
+                    <Icon name="potted_plant" /> Greenhouse
+                  </button>
+                </div>
+              </div>
+
+              <button className="btn btn--primary btn--block btn--lg" onClick={handleGeneratePlan} disabled={loading || !address}>
+                <Icon name="auto_awesome" /> Generate my plan
+              </button>
+
+              {error && (
+                <div className="alert alert--error">
+                  <Icon name="error" />
+                  <div><strong>Couldn't build the plan.</strong><p>{error}</p></div>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ---- LOADING ------------------------------------------------------ */}
+        {loading && (
+          <section className="panel loading">
+            <div className="loading__head">
+              <span className="spinner" />
+              <div>
+                <h2>Planning your growing year</h2>
+                <p className="muted">The agents are querying the climate and botanical servers…</p>
+              </div>
+            </div>
+            <AgentActivity steps={displayedSteps} />
+          </section>
+        )}
+
+        {/* ---- STEP 2: checkpoint ------------------------------------------- */}
+        {step === 2 && pendingConfirmation && !loading && (
+          <section className="checkpoint">
+            <div className="panel checkpoint__intro">
+              <div className="checkpoint__title">
+                <span className="checkpoint__pill"><Icon name="front_hand" /> Your approval needed</span>
+                <h2>{pendingConfirmation.checkpoint?.title || "Review the suggested crops"}</h2>
+                <p className="muted">
+                  {pendingConfirmation.checkpoint?.message ||
+                    "The planner paused before finalising. Keep, add or drop crops, then approve."}
+                </p>
+              </div>
+              <div className="checkpoint__climate">
+                <span><Icon name="location_on" />{pendingConfirmation.location}</span>
+                <span className="mono">Zone {pendingConfirmation.estimatedHardinessZone}</span>
+                <span className="mono">Min {pendingConfirmation.absoluteMinTempYear}°C</span>
+              </div>
+              {pendingConfirmation.rationale && <p className="quote">“{pendingConfirmation.rationale}”</p>}
+            </div>
+
+            {pendingConfirmation.review && (
+              <div className="panel scorecard">
+                <div className="scorecard__head">
+                  <div>
+                    <p className="eyebrow mono">Reviewer agent · independent critique</p>
+                    {pendingConfirmation.review.verdict && (
+                      <p className="scorecard__verdict">“{pendingConfirmation.review.verdict}”</p>
+                    )}
+                  </div>
+                  {typeof pendingConfirmation.review.score === "number" && (
+                    <div className={`gauge ${
+                      pendingConfirmation.review.score >= 75 ? "is-good"
+                      : pendingConfirmation.review.score >= 50 ? "is-fair" : "is-poor"}`}>
+                      <span className="gauge__num">{pendingConfirmation.review.score}</span>
+                      <span className="gauge__max mono">/100</span>
+                    </div>
+                  )}
+                </div>
+                <div className="scorecard__cols">
+                  {[["strengths", "Strengths", "thumb_up", "good"],
+                    ["concerns", "Watch outs", "priority_high", "bad"],
+                    ["suggestions", "Ideas", "lightbulb", "info"]].map(([key, label, icon, tone]) =>
+                    (pendingConfirmation.review[key] || []).length > 0 ? (
+                      <div key={key} className="scorecard__col">
+                        <h4 className={`scorecard__col-title is-${tone}`}><Icon name={icon} /> {label}</h4>
+                        <ul>{pendingConfirmation.review[key].map((s, i) => <li key={i}>{s}</li>)}</ul>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="panel">
+              <div className="section-head">
+                <h3 className="panel__title"><Icon name="grass" /> Choose your crops</h3>
+                <span className="counter mono">{checkpointSelection.length} selected</span>
+              </div>
+              <p className="muted section-head__sub">Suggested crops are pre-selected. Tap a card to add or remove it.</p>
+              <div className="cropgrid">
+                {(pendingConfirmation.compatiblePlants || []).map((plant) => (
+                  <CropCard
+                    key={plant.id}
+                    plant={plant}
+                    selected={checkpointSelection.includes(plant.id)}
+                    proposed={(pendingConfirmation.proposedPlantIds || []).includes(plant.id)}
+                    onToggle={() => toggleCheckpointPlant(plant.id)}
+                  />
+                ))}
+              </div>
+
+              <div className="checkpoint__actions">
+                <button className="btn btn--danger-ghost" onClick={() => handleConfirm(false)} disabled={confirming}>
+                  <Icon name="close" /> Reject all
+                </button>
+                <button
+                  className="btn btn--primary btn--lg"
+                  onClick={() => handleConfirm(true)}
+                  disabled={confirming || checkpointSelection.length === 0}
+                >
+                  <Icon name="check" />
+                  {confirming ? "Generating…"
+                    : sameSelection(checkpointSelection, pendingConfirmation.proposedPlantIds || [])
+                      ? "Approve & build plan"
+                      : "Approve my selection"}
+                </button>
+              </div>
+              {error && <div className="alert alert--error"><Icon name="error" /><div><p>{error}</p></div></div>}
+            </div>
+          </section>
+        )}
+
+        {/* ---- REJECTED ----------------------------------------------------- */}
+        {step === 2 && rejection && !loading && (
+          <section className="panel state">
+            <Icon name="block" className="state__icon is-danger" />
+            <h2>Selection rejected</h2>
+            <p className="muted">{rejection.message || "No plan was generated."}</p>
+            <button className="btn btn--primary" onClick={startOver}><Icon name="restart_alt" /> Start over</button>
+          </section>
+        )}
+
+        {/* ---- STEP 3: dashboard ------------------------------------------- */}
+        {step === 3 && planResult && !loading && (
+          <PlanDashboard
+            plan={planResult}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            companionView={companionView}
+            setCompanionView={setCompanionView}
+            displayedSteps={displayedSteps}
+            chat={{
+              messages: chatMessages,
+              input: chatInput,
+              setInput: setChatInput,
+              loading: chatLoading,
+              send: sendChatMessage,
+              windowRef: chatWindowRef,
+            }}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
+// Plan dashboard — tabbed result view
+// --------------------------------------------------------------------------
+function PlanDashboard({ plan, activeTab, setActiveTab, companionView, setCompanionView, displayedSteps, chat }) {
+  const hasSavings = plan.yieldEstimate && (plan.yieldEstimate.crops || []).length > 0;
+  const hasPests = plan.pestAdvisory && (plan.pestAdvisory.risks || []).length > 0;
+
+  const tabs = [
+    ["overview", "Overview", "dashboard"],
+    ["calendar", "Calendar", "calendar_month"],
+    ["crops", "Crops", "grass"],
+    ["companions", "Companions", "group_work"],
+    hasPests && ["pests", "Pests", "pest_control"],
+    hasSavings && ["savings", "Savings", "savings"],
+    ["ask", "Ask", "forum"],
+  ].filter(Boolean);
+
+  const sec = plan.security;
+  const securityTone = sec?.checkpointSkipped ? "skipped" : sec?.adjusted ? "adjusted" : "approved";
+  const securityText = sec?.checkpointSkipped
+    ? "No approval checkpoint was triggered"
+    : sec?.adjusted
+      ? "Approved by you — you adjusted the selection"
+      : "Approved by you at the safety checkpoint";
+
+  return (
+    <div className="dash">
+      {sec && (
+        <div className={`approval approval--${securityTone}`}>
+          <Icon name={securityTone === "skipped" ? "info" : "verified"} />
+          <div>
+            <strong>{securityText}</strong>
+            <span className="approval__mech mono">{sec.mechanism}</span>
+          </div>
+        </div>
+      )}
+
+      <nav className="tabs" role="tablist">
+        {tabs.map(([id, label, icon]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            className={`tab${activeTab === id ? " is-active" : ""}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon name={icon} /> {label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="dash__body">
+        {activeTab === "overview" && <OverviewTab plan={plan} displayedSteps={displayedSteps} goCalendar={() => setActiveTab("calendar")} />}
+        {activeTab === "calendar" && <CalendarTab plan={plan} />}
+        {activeTab === "crops" && <CropsTab plan={plan} />}
+        {activeTab === "companions" && <CompanionsTab plan={plan} view={companionView} setView={setCompanionView} />}
+        {activeTab === "pests" && hasPests && <PestsTab plan={plan} />}
+        {activeTab === "savings" && hasSavings && <SavingsTab plan={plan} />}
+        {activeTab === "ask" && <AskTab chat={chat} />}
+      </div>
+    </div>
+  );
+}
+
+function Metric({ icon, value, label, tone }) {
+  return (
+    <div className={`metric${tone ? ` metric--${tone}` : ""}`}>
+      <Icon name={icon} className="metric__icon" />
+      <div className="metric__value">{value}</div>
+      <div className="metric__label">{label}</div>
+    </div>
+  );
+}
+
+function OverviewTab({ plan, displayedSteps, goCalendar }) {
+  const ye = plan.yieldEstimate;
+  const ff = plan.frostDates;
+  return (
+    <div className="grid grid--overview">
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="insights" /> At a glance</h3>
+        <div className="metrics">
+          <Metric icon="thermostat" value={plan.estimatedHardinessZone || "—"} label="USDA zone" />
+          {ff?.frostFreeDays != null && <Metric icon="wb_sunny" value={ff.frostFreeDays} label="Frost-free days" />}
+          {ye && <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label="Est. harvest" tone="green" />}
+          {ye && <Metric icon="savings" value={`€${ye.totalValueEur}`} label="Grocery value" tone="amber" />}
+        </div>
+        {plan.coordinatorComment && <p className="quote">{plan.coordinatorComment}</p>}
+        <div className="chips">
+          <span className="chip-pill"><Icon name="calendar_month" /> {plan.season || "—"}</span>
+          <span className="chip-pill"><Icon name={plan.greenhouse ? "potted_plant" : "wb_sunny"} /> {plan.greenhouse ? "Greenhouse" : "Outdoor"}</span>
+          <span className="chip-pill"><Icon name="grass" /> {(plan.selectedPlants || []).length} crops</span>
+        </div>
+        <button className="btn btn--ghost btn--block" onClick={goCalendar}>
+          <Icon name="calendar_month" /> See the growing calendar
         </button>
       </section>
 
-      {/* Loading Steps & Logs */}
-      {loading && (
-        <section className="glass-card">
-          <div className="loader-container">
-            <span className="spinner"></span>
-            <h3>Agent Coordination in Progress</h3>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-              The agents are querying the Climate and Botanical MCP servers...
-            </p>
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="location_on" /> Your location</h3>
+        <p className="muted small">{plan.location}</p>
+        {plan.climateYears && (
+          <p className="muted xsmall">
+            {plan.climateYears.count}-year climate average ({plan.climateYears.start}–{plan.climateYears.end})
+          </p>
+        )}
+        <LocationMap coordinates={plan.coordinates} />
+        {ff && (
+          <div className="frost">
+            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">Last spring frost</span><span className="frost__val">{ff.lastSpringFrost || "—"}</span></div></div>
+            <div className="frost__item"><Icon name="ac_unit" /><div><span className="frost__label">First autumn frost</span><span className="frost__val">{ff.firstAutumnFrost || "—"}</span></div></div>
           </div>
-          {renderSteps(displayedSteps)}
-        </section>
-      )}
-
-      {/* Human-in-the-loop checkpoint */}
-      {pendingConfirmation && !loading && (
-        <section className="glass-card checkpoint-card">
-          <div className="checkpoint-header">
-            <span className="material-symbols checkpoint-icon">verified_user</span>
+        )}
+        {plan.wateringAdvice && (
+          <div className={`watering watering--${plan.wateringAdvice.level}`}>
+            <Icon name="water_drop" />
             <div>
-              <h2>{pendingConfirmation.checkpoint?.title || "Human approval required"}</h2>
-              <span className="checkpoint-tag">Human-in-the-loop · Agent Security &amp; Control</span>
-            </div>
-          </div>
-
-          <p className="checkpoint-message">
-            {pendingConfirmation.checkpoint?.message ||
-              "The Planner agent has paused execution and is waiting for your approval before finalising the crops."}
-          </p>
-
-          <div className="checkpoint-climate">
-            <span><strong>Location:</strong> {pendingConfirmation.location}</span>
-            <span><strong>USDA Zone:</strong> {pendingConfirmation.estimatedHardinessZone}</span>
-            <span><strong>Historical min temp:</strong> {pendingConfirmation.absoluteMinTempYear}°C</span>
-          </div>
-
-          {pendingConfirmation.rationale && (
-            <p className="narrative-comment">“{pendingConfirmation.rationale}”</p>
-          )}
-
-          {pendingConfirmation.review && (
-            <div className="review-card">
-              <div className="review-header">
-                <span className="material-symbols review-icon">rate_review</span>
-                <div className="review-heading">
-                  <h3>Reviewer agent — independent critique</h3>
-                  <span className="review-tag">Second opinion before approval</span>
-                </div>
-                {typeof pendingConfirmation.review.score === "number" && (
-                  <div
-                    className={`review-score ${
-                      pendingConfirmation.review.score >= 75
-                        ? "good"
-                        : pendingConfirmation.review.score >= 50
-                        ? "fair"
-                        : "poor"
-                    }`}
-                  >
-                    {pendingConfirmation.review.score}
-                    <span className="review-score-max">/100</span>
-                  </div>
-                )}
-              </div>
-              {pendingConfirmation.review.verdict && (
-                <p className="review-verdict">“{pendingConfirmation.review.verdict}”</p>
-              )}
-              <div className="review-columns">
-                {(pendingConfirmation.review.strengths || []).length > 0 && (
-                  <div className="review-col">
-                    <h4 className="review-col-title is-strength">Strengths</h4>
-                    <ul>
-                      {pendingConfirmation.review.strengths.map((s, i) => (
-                        <li key={`str-${i}`}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(pendingConfirmation.review.concerns || []).length > 0 && (
-                  <div className="review-col">
-                    <h4 className="review-col-title is-concern">Concerns</h4>
-                    <ul>
-                      {pendingConfirmation.review.concerns.map((c, i) => (
-                        <li key={`con-${i}`}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(pendingConfirmation.review.suggestions || []).length > 0 && (
-                  <div className="review-col">
-                    <h4 className="review-col-title is-suggestion">Suggestions</h4>
-                    <ul>
-                      {pendingConfirmation.review.suggestions.map((s, i) => (
-                        <li key={`sug-${i}`}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <h3 className="checkpoint-subtitle">Selection proposed by the agent</h3>
-          <p className="checkpoint-hint">
-            Confirm, add or remove crops before generating the final plan.
-            Highlighted cards will be included.
-          </p>
-
-          <div className="crops-grid">
-            {(pendingConfirmation.compatiblePlants || []).map((plant) => {
-              const isSelected = checkpointSelection.includes(plant.id);
-              const wasProposed = (pendingConfirmation.proposedPlantIds || []).includes(plant.id);
-              return (
-                <div
-                  key={plant.id}
-                  className={`crop-card ${isSelected ? "selected" : ""}`}
-                  onClick={() => toggleCheckpointPlant(plant.id)}
-                >
-                  {wasProposed && <div className="proposed-badge">AI proposal</div>}
-                  <div className="crop-name">{plant.name}</div>
-                  <div className="crop-science">{plant.scientificName}</div>
-                  <div className="crop-badge">Min sun: {plant.sunlightHoursMin} h</div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="checkpoint-actions">
-            <button
-              className="btn btn-danger"
-              onClick={() => handleConfirm(false)}
-              disabled={confirming}
-            >
-              <span className="material-symbols">cancel</span> Reject
-            </button>
-            <button
-              className="btn"
-              onClick={() => handleConfirm(true)}
-              disabled={confirming || checkpointSelection.length === 0}
-            >
-              <span className="material-symbols">check_circle</span>
-              {confirming
-                ? "Generating..."
-                : sameSelection(checkpointSelection, pendingConfirmation.proposedPlantIds || [])
-                  ? "Approve & generate plan"
-                  : "Approve modified selection"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Rejected checkpoint */}
-      {rejection && !loading && (
-        <section className="glass-card rejected-card">
-          <h2 className="card-title" style={{ color: "var(--danger)", borderColor: "rgba(239,83,80,0.3)" }}>
-            <span className="material-symbols">block</span> Selection rejected
-          </h2>
-          <p className="mt-4">
-            {rejection.message ||
-              "You rejected the proposed selection. No plan was generated."}
-          </p>
-          <button className="btn mt-4" onClick={resetWorkflow}>
-            <span className="material-symbols">restart_alt</span> New plan
-          </button>
-        </section>
-      )}
-
-      {/* Error Message */}
-      {error && !loading && (
-        <div className="glass-card" style={{ borderColor: "var(--danger)", borderLeftWidth: "4px" }}>
-          <h3 style={{ color: "var(--danger)", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span className="material-symbols">warning</span> Processing Error
-          </h3>
-          <p className="mt-4">{error}</p>
-        </div>
-      )}
-
-      {/* Dashboard Result View */}
-      {planResult && !loading && !error && (
-        <>
-          {/* Human-in-the-loop outcome banner (Agent Security & Control) */}
-          {planResult.security && (
-            <div
-              className={`security-banner ${
-                planResult.security.checkpointSkipped
-                  ? "skipped"
-                  : planResult.security.adjusted
-                    ? "adjusted"
-                    : "approved"
-              }`}
-            >
-              <span className="material-symbols">verified_user</span>
-              <div className="security-text">
-                <strong>
-                  {planResult.security.checkpointSkipped
-                    ? "Security checkpoint not triggered"
-                    : planResult.security.adjusted
-                      ? "Plan approved by a human · selection modified at checkpoint"
-                      : "Plan approved by a human at the security checkpoint"}
-                </strong>
-                <span className="security-mechanism">{planResult.security.mechanism}</span>
-              </div>
-              <button className="btn-reset" onClick={resetWorkflow}>
-                <span className="material-symbols">restart_alt</span> New plan
-              </button>
-            </div>
-          )}
-
-          {/* Plan context: target season + growing setup */}
-          <div className="plan-context">
-            <span className="context-chip">
-              <span className="material-symbols">calendar_month</span>
-              Season:&nbsp;<strong>{planResult.season || "—"}</strong>
-            </span>
-            <span className="context-chip">
-              <span className="material-symbols">
-                {planResult.greenhouse ? "potted_plant" : "wb_sunny"}
+              <strong>Next 7 days</strong>
+              <p>{plan.wateringAdvice.advice}</p>
+              <span className="watering__meta mono">
+                {plan.wateringAdvice.totalPrecipitationMm} mm · {plan.wateringAdvice.rainyDays} rainy day(s)
+                {plan.wateringAdvice.avgMaxTempC != null ? ` · max ${plan.wateringAdvice.avgMaxTempC}°C` : ""}
               </span>
-              Setup:&nbsp;<strong>{planResult.greenhouse ? "Greenhouse" : "Outdoor"}</strong>
-            </span>
+            </div>
           </div>
+        )}
+      </section>
 
-          {/* Multi-agent + MCP activity log */}
-          {displayedSteps.length > 0 && (
-            <div className="glass-card activity-card">
-              <h2 className="card-title">
-                <span className="material-symbols">network_node</span> Agent Activity Log
-              </h2>
-              {renderSteps(displayedSteps)}
+      {displayedSteps.length > 0 && (
+        <section className="panel grid--full">
+          <details className="disclosure">
+            <summary><Icon name="network_node" /> Behind the plan — agent activity ({displayedSteps.length} steps)</summary>
+            <AgentActivity steps={displayedSteps} />
+          </details>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function CalendarTab({ plan }) {
+  return (
+    <div className="grid grid--single">
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="calendar_month" /> Your growing year</h3>
+        <p className="muted section-head__sub">Tap a month to see exactly what to do.</p>
+        <YearRibbon monthlyCalendar={plan.monthlyCalendar || []} />
+      </section>
+
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="event_available" /> Planting schedule</h3>
+        <p className="muted section-head__sub">
+          When to put each crop out and when to harvest{plan.greenhouse ? " · greenhouse" : ""}.
+        </p>
+        <div className="schedule">
+          {(plan.plantingSchedule || []).map((row, idx) => (
+            <div key={idx} className={`schedule__row${row.inSeason ? " is-season" : ""}`}>
+              <div className="schedule__plant">
+                <span className="schedule__name">{row.plant}</span>
+                {row.inSeason && <span className="tag tag--season">In season</span>}
+              </div>
+              <div className="schedule__win">
+                <Icon name="grass" className="is-green" />
+                <div><span className="schedule__lbl">Put out</span><span className="schedule__val">{row.putInField}</span></div>
+              </div>
+              <div className="schedule__win">
+                <Icon name="nutrition" className="is-amber" />
+                <div><span className="schedule__lbl">Harvest</span><span className="schedule__val">{row.harvest}</span></div>
+              </div>
+              {row.note && <div className="schedule__note">{row.note}</div>}
+            </div>
+          ))}
+          {(plan.plantingSchedule || []).length === 0 && <p className="empty-note">No crops scheduled.</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CropsTab({ plan }) {
+  const selectedIds = new Set((plan.selectedPlants || []).map((p) => p.id));
+  return (
+    <div className="grid grid--single">
+      <section className="panel">
+        <div className="section-head">
+          <h3 className="panel__title"><Icon name="grass" /> Crops in your plan</h3>
+          <span className="counter mono">{(plan.selectedPlants || []).length} growing</span>
+        </div>
+        <p className="muted section-head__sub">
+          Highlighted crops were approved and drive your calendar. The rest were analysed but left out.
+        </p>
+        <div className="cropgrid">
+          {(plan.compatiblePlants || []).map((plant) => (
+            <CropCard key={plant.id} plant={plant} selected={selectedIds.has(plant.id)} readonly />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CompanionsTab({ plan, view, setView }) {
+  const c = plan.companionship || { companions: [], antagonists: [], warnings: [] };
+  const empty = c.companions.length === 0 && c.antagonists.length === 0 && c.warnings.length === 0;
+  return (
+    <div className="grid grid--single">
+      <section className="panel">
+        <div className="section-head">
+          <h3 className="panel__title"><Icon name="group_work" /> Companion planting</h3>
+          <div className="segmented segmented--sm" role="group" aria-label="View">
+            <button className={`seg${view === "list" ? " is-active" : ""}`} onClick={() => setView("list")}><Icon name="list" /> List</button>
+            <button className={`seg${view === "graph" ? " is-active" : ""}`} onClick={() => setView("graph")}><Icon name="hub" /> Graph</button>
+          </div>
+        </div>
+        {plan.plannerComment && <p className="quote">{plan.plannerComment}</p>}
+
+        {view === "graph" ? (
+          <CompanionGraph selectedPlants={plan.selectedPlants} companionship={c} />
+        ) : empty ? (
+          <p className="empty-note">No notable companion relationships for this selection.</p>
+        ) : (
+          <div className="rel">
+            {c.companions.map((x, i) => (
+              <div key={`c${i}`} className="rel__item rel__item--good">
+                <Icon name="add_circle" />
+                <div><strong>{x.plants[0]} + {x.plants[1]}</strong><p>{x.reason}</p></div>
+              </div>
+            ))}
+            {c.antagonists.map((x, i) => (
+              <div key={`a${i}`} className="rel__item rel__item--bad">
+                <Icon name="do_not_disturb_on" />
+                <div><strong>{x.plants[0]} & {x.plants[1]}</strong><p>{x.reason}</p></div>
+              </div>
+            ))}
+            {c.warnings.map((w, i) => (
+              <div key={`w${i}`} className="rel__item rel__item--warn">
+                <Icon name="warning" />
+                <div><strong>Botanist's note</strong><p>{w}</p></div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function PestsTab({ plan }) {
+  const adv = plan.pestAdvisory;
+  return (
+    <div className="grid grid--single">
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="pest_control" /> Pests & diseases</h3>
+        <p className="muted section-head__sub">
+          Common issues for your crops with organic remedies — and which plants help keep them down.
+        </p>
+        {adv.climateNote && <div className="note"><Icon name="thermostat" /><p>{adv.climateNote}</p></div>}
+        <div className="pests">
+          {adv.risks.map((risk, idx) => (
+            <div key={idx} className="pests__crop">
+              <div className="pests__crop-name">{risk.plant}</div>
+              {risk.issues.map((issue, j) => (
+                <div key={j} className="pests__issue">
+                  <div className="pests__issue-head">
+                    <span className={`tag tag--${issue.type}`}>{issue.type}</span>
+                    <span className="pests__issue-name">{issue.name}</span>
+                  </div>
+                  <p className="pests__remedy">{issue.remedy}</p>
+                  {issue.deterredBy.length > 0 && (
+                    <div className="pests__allies">
+                      <Icon name="shield" /> Helped by:
+                      {issue.deterredBy.map((ally, k) => <span key={k} className="ally-chip">{ally}</span>)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {(adv.protectiveAllies || []).length > 0 && (
+          <div className="note note--green">
+            <Icon name="verified_user" />
+            <p><strong>Your protective allies:</strong>{" "}
+              {adv.protectiveAllies.map((a) => `${a.plant} (${a.deters.join(", ")})`).join(" · ")}</p>
+          </div>
+        )}
+        {(adv.tips || []).length > 0 && (
+          <ul className="tips">{adv.tips.map((tip, idx) => <li key={idx}><Icon name="tips_and_updates" /> {tip}</li>)}</ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SavingsTab({ plan }) {
+  const ye = plan.yieldEstimate;
+  const max = Math.max(1, ...(ye.crops || []).map((c) => c.valueEur || 0));
+  return (
+    <div className="grid grid--single">
+      <section className="panel">
+        <h3 className="panel__title"><Icon name="savings" /> Harvest & savings</h3>
+        <p className="muted section-head__sub">
+          A full-season estimate for your selection — and what the same produce would cost at the shop.
+        </p>
+        <div className="metrics metrics--2">
+          <Metric icon="nutrition" value={`${ye.totalYieldKg} kg`} label="Estimated harvest" tone="green" />
+          <Metric icon="savings" value={`€${ye.totalValueEur}`} label="Grocery value / year" tone="amber" />
+        </div>
+        <div className="bars">
+          {(ye.crops || []).map((row, idx) => {
+            const pct = row.ornamental ? 0 : Math.round(((row.valueEur || 0) / max) * 100);
+            return (
+              <div key={idx} className="bars__row">
+                <span className="bars__name">{row.plant}</span>
+                <div className="bars__track">
+                  {!row.ornamental && <div className="bars__fill" style={{ width: `${Math.max(pct, 4)}%` }} />}
+                </div>
+                <span className="bars__val mono">
+                  {row.ornamental ? "companion" : `${row.yieldKg}kg · €${row.valueEur}`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="muted xsmall">{ye.assumption}</p>
+      </section>
+    </div>
+  );
+}
+
+function AskTab({ chat }) {
+  return (
+    <div className="grid grid--single">
+      <section className="panel chat">
+        <h3 className="panel__title"><Icon name="forum" /> Ask the garden advisor</h3>
+        <p className="muted section-head__sub">
+          Follow-up questions about your plan — substitutions, watering, timing. Answers are re-checked against your climate and crops.
+        </p>
+        <div className="chat__window" ref={chat.windowRef}>
+          {chat.messages.length === 0 && (
+            <div className="chat__empty">
+              <Icon name="eco" />
+              <p>Try “Can I swap basil for mint?” or “Which crop needs the least water?”</p>
             </div>
           )}
-
-          <div className="dashboard-grid">
-          
-          {/* Left Column: Location details, Botanical selector & Companion suggestions */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
-            
-            {/* Climate & location */}
-            <div className="glass-card">
-              <h2 className="card-title">
-                <span className="material-symbols">location_on</span> Geo-Climate Analysis
-              </h2>
-              <p className="narrative-comment">{planResult.coordinatorComment}</p>
-              
-              <div className="climate-metrics">
-                <div className="metric-box">
-                  <div className="metric-value">{planResult.estimatedHardinessZone}</div>
-                  <div className="metric-label">USDA Hardiness Zone</div>
-                </div>
-                <div className="metric-box">
-                  <div className="metric-value">{planResult.absoluteMinTempYear}°C</div>
-                  <div className="metric-label">Recorded Min Temp</div>
-                </div>
-              </div>
-              <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                <strong>Detected location:</strong> {planResult.location}
-              </p>
-              {planResult.climateYears && (
-                <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Based on {planResult.climateYears.count}-year climate average
-                  ({planResult.climateYears.start}–{planResult.climateYears.end}).
-                </p>
-              )}
-
-              <LocationMap coordinates={planResult.coordinates} />
-
-              {planResult.frostDates && (
-                <div className="frost-row">
-                  <div className="frost-box">
-                    <span className="material-symbols frost-icon">ac_unit</span>
-                    <div>
-                      <div className="frost-label">Last spring frost</div>
-                      <div className="frost-value">{planResult.frostDates.lastSpringFrost || "—"}</div>
-                    </div>
-                  </div>
-                  <div className="frost-box">
-                    <span className="material-symbols frost-icon">ac_unit</span>
-                    <div>
-                      <div className="frost-label">First autumn frost</div>
-                      <div className="frost-value">{planResult.frostDates.firstAutumnFrost || "—"}</div>
-                    </div>
-                  </div>
-                  <div className="frost-box">
-                    <span className="material-symbols frost-icon" style={{ color: "#4a8c3d" }}>calendar_today</span>
-                    <div>
-                      <div className="frost-label">Frost-free days</div>
-                      <div className="frost-value">
-                        {planResult.frostDates.frostFreeDays != null ? `${planResult.frostDates.frostFreeDays}` : "—"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {planResult.wateringAdvice && (
-                <div className={`watering-advice ${planResult.wateringAdvice.level}`}>
-                  <span className="material-symbols watering-icon">water_drop</span>
-                  <div>
-                    <strong>Watering advice (next 7 days)</strong>
-                    <p>{planResult.wateringAdvice.advice}</p>
-                    <span className="watering-meta">
-                      {planResult.wateringAdvice.totalPrecipitationMm} mm forecast ·
-                      {" "}{planResult.wateringAdvice.rainyDays} rainy day(s)
-                      {planResult.wateringAdvice.avgMaxTempC != null
-                        ? ` · avg max ${planResult.wateringAdvice.avgMaxTempC}°C`
-                        : ""}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Compatible crop selection */}
-            <div className="glass-card">
-              <h2 className="card-title">
-                <span className="material-symbols">grid_view</span> Selected Crops
-              </h2>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
-                Crops analysed by the Planner agent. Highlighted ones were approved at the human checkpoint and feed the calendar.
-              </p>
-              
-              <div className="crops-grid">
-                {planResult.compatiblePlants.map((plant) => {
-                  const isSelected = (planResult.selectedPlants || []).some((p) => p.id === plant.id);
-                  return (
-                    <div 
-                      key={plant.id} 
-                      className={`crop-card readonly ${isSelected ? "selected" : ""}`}
-                    >
-                      <div className="crop-name">{plant.name}</div>
-                      <div className="crop-science">{plant.scientificName}</div>
-                      <div className="crop-badge">Min sun: {plant.sunlightHoursMin} h</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Planting schedule: when to put each crop in the field + harvest */}
-            <div className="glass-card">
-              <h2 className="card-title">
-                <span className="material-symbols">event_available</span> Planting Schedule
-              </h2>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
-                When to put each approved crop in the field and when to harvest
-                {planResult.greenhouse ? " · greenhouse setup" : ""}.
-              </p>
-              <div className="schedule-list">
-                {(planResult.plantingSchedule || []).map((row, idx) => (
-                  <div key={idx} className={`schedule-row ${row.inSeason ? "in-season" : ""}`}>
-                    <div className="schedule-plant">
-                      <span className="schedule-name">{row.plant}</span>
-                      {row.inSeason && <span className="season-chip">In season</span>}
-                    </div>
-                    <div className="schedule-windows">
-                      <div className="schedule-window">
-                        <span className="material-symbols sw-icon" style={{ color: "#4a8c3d" }}>yard</span>
-                        <div>
-                          <div className="sw-label">Put in field</div>
-                          <div className="sw-value">{row.putInField}</div>
-                        </div>
-                      </div>
-                      <div className="schedule-window">
-                        <span className="material-symbols sw-icon" style={{ color: "#b06a16" }}>nutrition</span>
-                        <div>
-                          <div className="sw-label">Harvest</div>
-                          <div className="sw-value">{row.harvest}</div>
-                        </div>
-                      </div>
-                    </div>
-                    {row.note && <div className="schedule-note">{row.note}</div>}
-                  </div>
-                ))}
-                {(planResult.plantingSchedule || []).length === 0 && (
-                  <p className="no-actions text-center">No crops selected for scheduling.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Estimated harvest & grocery savings */}
-            {planResult.yieldEstimate && (planResult.yieldEstimate.crops || []).length > 0 && (
-              <div className="glass-card">
-                <h2 className="card-title">
-                  <span className="material-symbols">savings</span> Harvest &amp; Savings
-                </h2>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
-                  Estimated full-season harvest for your selection and what buying the
-                  same produce would cost.
-                </p>
-
-                <div className="yield-totals">
-                  <div className="yield-total-card">
-                    <span className="material-symbols yt-icon" style={{ color: "#4a8c3d" }}>nutrition</span>
-                    <div>
-                      <div className="yt-value">{planResult.yieldEstimate.totalYieldKg} kg</div>
-                      <div className="yt-label">Estimated harvest</div>
-                    </div>
-                  </div>
-                  <div className="yield-total-card">
-                    <span className="material-symbols yt-icon" style={{ color: "#b06a16" }}>savings</span>
-                    <div>
-                      <div className="yt-value">€{planResult.yieldEstimate.totalValueEur}</div>
-                      <div className="yt-label">Grocery value / year</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="yield-list">
-                  {(planResult.yieldEstimate.crops || []).map((row, idx) => (
-                    <div key={idx} className="yield-row">
-                      <span className="yield-name">{row.plant}</span>
-                      {row.ornamental ? (
-                        <span className="yield-meta" style={{ color: "var(--text-muted)" }}>
-                          companion / ornamental
-                        </span>
-                      ) : (
-                        <span className="yield-meta">
-                          {row.yieldKg} kg · €{row.valueEur}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <p className="yield-assumption">{planResult.yieldEstimate.assumption}</p>
-              </div>
-            )}
-
-            {/* Companion planting & suggestions */}
-            <div className="glass-card">
-              <h2 className="card-title">
-                <span className="material-symbols">groups</span> Companion Planting & Alerts
-              </h2>
-              <p className="narrative-comment">{planResult.plannerComment}</p>
-
-              <div className="companion-toggle" role="group" aria-label="Companion view">
-                <button
-                  type="button"
-                  className={`seg ${companionView === "list" ? "active" : ""}`}
-                  onClick={() => setCompanionView("list")}
-                >
-                  <span className="material-symbols">list</span> <span className="seg-label">List</span>
-                </button>
-                <button
-                  type="button"
-                  className={`seg ${companionView === "graph" ? "active" : ""}`}
-                  onClick={() => setCompanionView("graph")}
-                >
-                  <span className="material-symbols">hub</span> <span className="seg-label">Graph</span>
-                </button>
-              </div>
-
-              {companionView === "graph" ? (
-                <CompanionGraph
-                  selectedPlants={planResult.selectedPlants}
-                  companionship={planResult.companionship}
-                />
-              ) : (
-              <div className="companion-section">
-                {/* Companions */}
-                {planResult.companionship.companions.map((c, idx) => (
-                  <div key={`comp-${idx}`} className="companion-item good">
-                    <span className="material-symbols icon">add_circle</span>
-                    <div className="companion-text">
-                      <strong>{c.plants[0]} + {c.plants[1]}</strong>
-                      <p>{c.reason}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Antagonists */}
-                {planResult.companionship.antagonists.map((a, idx) => (
-                  <div key={`ant-${idx}`} className="companion-item bad">
-                    <span className="material-symbols icon">remove_circle</span>
-                    <div className="companion-text">
-                      <strong>{a.plants[0]} & {a.plants[1]}</strong>
-                      <p>{a.reason}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Warnings */}
-                {planResult.companionship.warnings.map((w, idx) => (
-                  <div key={`warn-${idx}`} className="companion-item warning">
-                    <span className="material-symbols icon">warning</span>
-                    <div className="companion-text">
-                      <strong>Botanist's Note</strong>
-                      <p>{w}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {planResult.companionship.companions.length === 0 && 
-                 planResult.companionship.antagonists.length === 0 && 
-                 planResult.companionship.warnings.length === 0 && (
-                   <p className="no-actions text-center">No special companion relationships active for the selected plants.</p>
-                )}
-              </div>
-              )}
-            </div>
-
-            {/* Pest & disease advisory */}
-            {planResult.pestAdvisory && (planResult.pestAdvisory.risks || []).length > 0 && (
-              <div className="glass-card">
-                <h2 className="card-title">
-                  <span className="material-symbols">pest_control</span> Pest &amp; Disease Advisor
-                </h2>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
-                  Common issues for your crops, with organic remedies — plus which of
-                  your plants naturally help keep them in check.
-                </p>
-
-                {planResult.pestAdvisory.climateNote && (
-                  <div className="pest-climate-note">
-                    <span className="material-symbols">thermostat</span>
-                    <p>{planResult.pestAdvisory.climateNote}</p>
-                  </div>
-                )}
-
-                <div className="pest-list">
-                  {planResult.pestAdvisory.risks.map((risk, idx) => (
-                    <div key={idx} className="pest-crop">
-                      <div className="pest-crop-name">{risk.plant}</div>
-                      {risk.issues.map((issue, j) => (
-                        <div key={j} className="pest-issue">
-                          <div className="pest-issue-head">
-                            <span className={`pest-tag ${issue.type}`}>{issue.type}</span>
-                            <span className="pest-issue-name">{issue.name}</span>
-                          </div>
-                          <p className="pest-remedy">{issue.remedy}</p>
-                          {issue.deterredBy.length > 0 && (
-                            <div className="pest-allies">
-                              <span className="material-symbols" style={{ fontSize: "16px", color: "var(--new-leaf)", verticalAlign: "-3px" }}>shield</span>
-                              &nbsp;Helped by:&nbsp;
-                              {issue.deterredBy.map((ally, k) => (
-                                <span key={k} className="pest-ally-chip">{ally}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-
-                {(planResult.pestAdvisory.protectiveAllies || []).length > 0 && (
-                  <div className="pest-allies-summary">
-                    <strong>Your protective allies:</strong>{" "}
-                    {planResult.pestAdvisory.protectiveAllies
-                      .map((a) => `${a.plant} (${a.deters.join(", ")})`)
-                      .join(" · ")}
-                  </div>
-                )}
-
-                {(planResult.pestAdvisory.tips || []).length > 0 && (
-                  <ul className="pest-tips">
-                    {planResult.pestAdvisory.tips.map((tip, idx) => (
-                      <li key={idx}>{tip}</li>
+          {chat.messages.map((msg, idx) => (
+            <div key={idx} className={`bubble bubble--${msg.role}${msg.error ? " is-error" : ""}`}>
+              {msg.role === "advisor" && <Icon name="eco" className="bubble__avatar" />}
+              <div className="bubble__text">
+                {msg.text}
+                {msg.steps && msg.steps.length > 0 && (
+                  <div className="bubble__tools">
+                    {msg.steps.filter((s) => s.type === "tool_call").map((s, j) => (
+                      <span key={j} className="tool-chip mono"><Icon name="bolt" /> {s.tool}</span>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Right Column: Monthly Calendar Timeline */}
-          <div className="glass-card">
-            <div className="calendar-header">
-              <h2 className="card-title" style={{ marginBottom: 0, border: "none" }}>
-                <span className="material-symbols">calendar_month</span> Optimised Cultivation Calendar
-              </h2>
-              <div className="calendar-export">
-                <button
-                  type="button"
-                  className="btn-export"
-                  onClick={() => downloadICS(planResult)}
-                  title="Download as .ics calendar"
-                >
-                  <span className="material-symbols">download</span> .ics
-                </button>
-                <button
-                  type="button"
-                  className="btn-export"
-                  onClick={() => downloadPDF(planResult)}
-                  title="Download cultivation plan as PDF"
-                >
-                  <span className="material-symbols">picture_as_pdf</span> PDF
-                </button>
-              </div>
             </div>
-            
-            <div className="calendar-container">
-              {planResult.monthlyCalendar.map((monthData, idx) => (
-                <div key={idx} className={`month-row ${monthData.inSeason ? "in-season" : ""}`}>
-                  <div className="month-info">
-                    <div className="month-name">{monthData.month}</div>
-                    <div className="month-temp">
-                      {monthData.averageMinTemp}°C | {monthData.averageMaxTemp}°C
-                    </div>
-                    {monthData.inSeason && <div className="month-season-tag">In season</div>}
-                  </div>
-                  
-                  <div className="month-actions">
-                    {monthData.actions.length > 0 ? (
-                      monthData.actions.map((act, actIdx) => (
-                        <div key={actIdx} className="action-pill">
-                          {getActionIcon(act.type)}
-                          <span className={`action-type ${act.type.toLowerCase().replace(/ \/ /g, '-').replace(/ /g, '-')}`}>
-                            {act.type}
-                          </span>
-                          <span className="action-desc">
-                            <strong>{act.plant}:</strong> {act.text}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="no-actions">No activities planned for this month.</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          ))}
+          {chat.loading && (
+            <div className="bubble bubble--advisor">
+              <Icon name="eco" className="bubble__avatar" />
+              <div className="bubble__text bubble__typing"><span /><span /><span /></div>
             </div>
-          </div>
-
-          </div>
-
-          {/* Follow-up advisor chat */}
-          <div className="glass-card chat-card">
-            <h2 className="card-title">
-              <span className="material-symbols">forum</span> Ask the Garden Advisor
-            </h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
-              Ask follow-up questions about your plan — substitutions, companions,
-              watering, timing. Answers are re-validated against your climate and crops.
-            </p>
-
-            <div className="chat-window">
-              {chatMessages.length === 0 && (
-                <div className="chat-empty">
-                  Try: <em>“Can I swap basil for mint?”</em> or
-                  {" "}<em>“Which crop needs the least water?”</em>
-                </div>
-              )}
-              {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`chat-bubble ${msg.role}${msg.error ? " error" : ""}`}>
-                  {msg.role === "advisor" && (
-                    <span className="material-symbols chat-avatar">eco</span>
-                  )}
-                  <div className="chat-text">
-                    {msg.text}
-                    {msg.steps && msg.steps.length > 0 && (
-                      <div className="chat-tools">
-                        {msg.steps
-                          .filter((s) => s.type === "tool_call")
-                          .map((s, j) => (
-                            <span key={j} className="chat-tool-chip">
-                              <span className="material-symbols" style={{ fontSize: "13px", verticalAlign: "-2px" }}>build</span>
-                              &nbsp;{s.tool}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="chat-bubble advisor">
-                  <span className="material-symbols chat-avatar">eco</span>
-                  <div className="chat-text chat-typing">Thinking…</div>
-                </div>
-              )}
-            </div>
-
-            <form
-              className="chat-input-row"
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendChatMessage();
-              }}
-            >
-              <input
-                type="text"
-                className="chat-input"
-                placeholder="Ask about your cultivation plan…"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                disabled={chatLoading}
-                maxLength={1000}
-              />
-              <button
-                type="submit"
-                className="btn-chat-send"
-                disabled={chatLoading || !chatInput.trim()}
-              >
-                <span className="material-symbols">send</span>
-              </button>
-            </form>
-          </div>
-        </>
-      )}
+          )}
+        </div>
+        <form className="chat__form" onSubmit={(e) => { e.preventDefault(); chat.send(); }}>
+          <input
+            type="text"
+            className="control"
+            placeholder="Ask about your plan…"
+            value={chat.input}
+            onChange={(e) => chat.setInput(e.target.value)}
+            disabled={chat.loading}
+            maxLength={1000}
+          />
+          <button type="submit" className="btn btn--primary" disabled={chat.loading || !chat.input.trim()}>
+            <Icon name="send" />
+          </button>
+        </form>
+      </section>
     </div>
   );
 }
