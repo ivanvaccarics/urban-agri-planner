@@ -2473,5 +2473,1248 @@
         "remedy": "Beer traps; hand-pick."
       }
     ]
+  },
+  {
+    "id": "cherry-tomato",
+    "name": "Cherry Tomato",
+    "scientificName": "Solanum lycopersicum var. cerasiforme",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, South-East, South-West",
+    "difficulty": "Easy",
+    "tempMin": 15,
+    "tempMax": 35,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "watering": "High",
+    "potSizeMin": 25,
+    "companions": [
+      "Basil",
+      "Lettuce",
+      "Marigold",
+      "Chive"
+    ],
+    "antagonists": [
+      "Potato",
+      "Fennel"
+    ],
+    "description": "Prolific, forgiving and ideal for balconies. Tumbling varieties thrive in hanging pots.",
+    "yieldKgPerPlant": 2.5,
+    "pricePerKg": 5.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Blast with water; plant basil and marigold nearby."
+      },
+      {
+        "name": "Blossom-end rot",
+        "type": "disease",
+        "remedy": "Keep watering even and add calcium to the mix."
+      }
+    ]
+  },
+  {
+    "id": "runner-bean",
+    "name": "Runner Bean",
+    "scientificName": "Phaseolus coccineus",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, South-East, West",
+    "difficulty": "Easy",
+    "tempMin": 12,
+    "tempMax": 30,
+    "sowingMonths": [
+      4,
+      5,
+      6
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9
+    ],
+    "watering": "Medium",
+    "potSizeMin": 30,
+    "companions": [
+      "Sweet Corn",
+      "Pumpkin",
+      "Nasturtium"
+    ],
+    "antagonists": [
+      "Garlic",
+      "Onion",
+      "Chive"
+    ],
+    "description": "Vigorous climber with edible pods and ornamental flowers; needs a tall support or trellis.",
+    "yieldKgPerPlant": 1.2,
+    "pricePerKg": 4.5,
+    "pests": [
+      {
+        "name": "Black bean aphid",
+        "type": "pest",
+        "remedy": "Pinch out infested tips; encourage ladybugs."
+      },
+      {
+        "name": "Halo blight",
+        "type": "disease",
+        "remedy": "Use clean seed and avoid overhead watering."
+      }
+    ]
+  },
+  {
+    "id": "broad-bean",
+    "name": "Broad Bean",
+    "scientificName": "Vicia faba",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 5,
+    "tempMax": 24,
+    "sowingMonths": [
+      2,
+      3,
+      10,
+      11
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7
+    ],
+    "watering": "Medium",
+    "potSizeMin": 25,
+    "companions": [
+      "Potato",
+      "Spinach",
+      "Sweet Corn"
+    ],
+    "antagonists": [
+      "Garlic",
+      "Onion"
+    ],
+    "description": "Hardy legume that fixes nitrogen and tolerates cool weather; good for early or autumn sowing.",
+    "yieldKgPerPlant": 0.8,
+    "pricePerKg": 4.0,
+    "pests": [
+      {
+        "name": "Black bean aphid",
+        "type": "pest",
+        "remedy": "Pinch out the soft growing tips once pods set."
+      },
+      {
+        "name": "Chocolate spot",
+        "type": "disease",
+        "remedy": "Improve airflow and avoid excess nitrogen."
+      }
+    ]
+  },
+  {
+    "id": "shallot",
+    "name": "Shallot",
+    "scientificName": "Allium cepa var. aggregatum",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 5,
+    "tempMax": 28,
+    "sowingMonths": [
+      2,
+      3,
+      10
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8
+    ],
+    "watering": "Low",
+    "potSizeMin": 18,
+    "companions": [
+      "Carrot",
+      "Beetroot",
+      "Lettuce",
+      "Strawberry"
+    ],
+    "antagonists": [
+      "Pea",
+      "Bush Bean"
+    ],
+    "description": "Mild, clustering onion relative that stores well; plant sets shallow in free-draining mix.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 6.0,
+    "pests": [
+      {
+        "name": "Onion fly",
+        "type": "pest",
+        "remedy": "Cover with fleece and rotate beds yearly."
+      },
+      {
+        "name": "White rot",
+        "type": "disease",
+        "remedy": "Avoid replanting alliums in infected soil."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Carrot fly"
+    ]
+  },
+  {
+    "id": "spring-onion",
+    "name": "Spring Onion",
+    "scientificName": "Allium fistulosum",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 28,
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "watering": "Medium",
+    "potSizeMin": 15,
+    "companions": [
+      "Carrot",
+      "Beetroot",
+      "Strawberry",
+      "Lettuce"
+    ],
+    "antagonists": [
+      "Pea",
+      "Bush Bean"
+    ],
+    "description": "Fast, cut-and-come-again alliums perfect for shallow pots and successional sowing.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 7.0,
+    "pests": [
+      {
+        "name": "Onion fly",
+        "type": "pest",
+        "remedy": "Use fleece covers and rotate where you grow them."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Carrot fly"
+    ]
+  },
+  {
+    "id": "ginger",
+    "name": "Ginger",
+    "scientificName": "Zingiber officinale",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Medium",
+    "tempMin": 18,
+    "tempMax": 32,
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11
+    ],
+    "watering": "Medium",
+    "potSizeMin": 25,
+    "companions": [
+      "Lemongrass",
+      "Turmeric",
+      "Chili Pepper"
+    ],
+    "antagonists": [],
+    "description": "Tropical rhizome that enjoys warmth and dappled light; grow a piece of supermarket root in a wide pot.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 12.0,
+    "pests": [
+      {
+        "name": "Root-knot nematode",
+        "type": "pest",
+        "remedy": "Use fresh sterile potting mix each season."
+      },
+      {
+        "name": "Rhizome rot",
+        "type": "disease",
+        "remedy": "Let the mix dry between waterings; ensure drainage."
+      }
+    ]
+  },
+  {
+    "id": "turmeric",
+    "name": "Turmeric",
+    "scientificName": "Curcuma longa",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Medium",
+    "tempMin": 18,
+    "tempMax": 33,
+    "sowingMonths": [
+      2,
+      3,
+      4
+    ],
+    "harvestMonths": [
+      10,
+      11,
+      12
+    ],
+    "watering": "Medium",
+    "potSizeMin": 25,
+    "companions": [
+      "Ginger",
+      "Lemongrass",
+      "Chili Pepper"
+    ],
+    "antagonists": [],
+    "description": "Warmth-loving rhizome with bold foliage; needs a long, frost-free season to bulk up.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 14.0,
+    "pests": [
+      {
+        "name": "Rhizome rot",
+        "type": "disease",
+        "remedy": "Avoid waterlogging and use a free-draining mix."
+      }
+    ]
+  },
+  {
+    "id": "lemongrass",
+    "name": "Lemongrass",
+    "scientificName": "Cymbopogon citratus",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, South-East, South-West",
+    "difficulty": "Easy",
+    "tempMin": 10,
+    "tempMax": 35,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
+    "watering": "Medium",
+    "potSizeMin": 22,
+    "companions": [
+      "Ginger",
+      "Turmeric",
+      "Chili Pepper"
+    ],
+    "antagonists": [],
+    "description": "Aromatic grass that thrives in sun and warmth; overwinter indoors in cold climates.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 15.0,
+    "pests": [
+      {
+        "name": "Rust",
+        "type": "disease",
+        "remedy": "Thin clumps for airflow and avoid wetting foliage."
+      }
+    ],
+    "deters": [
+      "Mosquitoes",
+      "Whitefly"
+    ]
+  },
+  {
+    "id": "lemon-balm",
+    "name": "Lemon Balm",
+    "scientificName": "Melissa officinalis",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Easy",
+    "tempMin": 5,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Medium",
+    "potSizeMin": 18,
+    "companions": [
+      "Tomato",
+      "Cabbage",
+      "Broccoli"
+    ],
+    "antagonists": [],
+    "description": "Lemon-scented perennial herb that tolerates part shade; contain in a pot as it spreads.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 18.0,
+    "pests": [
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Cut back hard and improve air circulation."
+      }
+    ],
+    "deters": [
+      "Mosquitoes",
+      "Gnats"
+    ]
+  },
+  {
+    "id": "tarragon",
+    "name": "French Tarragon",
+    "scientificName": "Artemisia dracunculus",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Medium",
+    "tempMin": 5,
+    "tempMax": 30,
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Low",
+    "potSizeMin": 20,
+    "companions": [
+      "Eggplant",
+      "Bell Pepper",
+      "Tomato"
+    ],
+    "antagonists": [],
+    "description": "Anise-flavoured perennial herb; grow from cuttings as true French tarragon rarely sets seed.",
+    "yieldKgPerPlant": 0.15,
+    "pricePerKg": 25.0,
+    "pests": [
+      {
+        "name": "Rust",
+        "type": "disease",
+        "remedy": "Divide every few years and avoid soggy soil."
+      }
+    ],
+    "deters": [
+      "Aphids"
+    ]
+  },
+  {
+    "id": "marjoram",
+    "name": "Sweet Marjoram",
+    "scientificName": "Origanum majorana",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, South-East, South-West",
+    "difficulty": "Easy",
+    "tempMin": 8,
+    "tempMax": 32,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Low",
+    "potSizeMin": 15,
+    "companions": [
+      "Tomato",
+      "Eggplant",
+      "Zucchini"
+    ],
+    "antagonists": [],
+    "description": "Sweeter, milder relative of oregano that loves heat and free-draining soil.",
+    "yieldKgPerPlant": 0.12,
+    "pricePerKg": 22.0,
+    "pests": [
+      {
+        "name": "Spider mite",
+        "type": "pest",
+        "remedy": "Mist foliage and rinse off mites in hot spells."
+      }
+    ]
+  },
+  {
+    "id": "summer-savory",
+    "name": "Summer Savory",
+    "scientificName": "Satureja hortensis",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 8,
+    "tempMax": 32,
+    "sowingMonths": [
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Low",
+    "potSizeMin": 15,
+    "companions": [
+      "Bush Bean",
+      "Runner Bean",
+      "Onion"
+    ],
+    "antagonists": [],
+    "description": "Peppery annual herb traditionally paired with beans; thrives in lean, sunny pots.",
+    "yieldKgPerPlant": 0.1,
+    "pricePerKg": 20.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Rarely troubled; rinse off any colonies with water."
+      }
+    ],
+    "deters": [
+      "Bean beetle",
+      "Aphids"
+    ]
+  },
+  {
+    "id": "stevia",
+    "name": "Stevia",
+    "scientificName": "Stevia rebaudiana",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, South-East, South-West",
+    "difficulty": "Medium",
+    "tempMin": 10,
+    "tempMax": 32,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
+    "watering": "Medium",
+    "potSizeMin": 20,
+    "companions": [
+      "Basil",
+      "Chili Pepper",
+      "Bell Pepper"
+    ],
+    "antagonists": [],
+    "description": "Naturally sweet leaves used as a sugar substitute; tender perennial, overwinter frost-free.",
+    "yieldKgPerPlant": 0.15,
+    "pricePerKg": 30.0,
+    "pests": [
+      {
+        "name": "Whitefly",
+        "type": "pest",
+        "remedy": "Use yellow sticky traps and inspect leaf undersides."
+      }
+    ]
+  },
+  {
+    "id": "catnip",
+    "name": "Catnip",
+    "scientificName": "Nepeta cataria",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 32,
+    "sowingMonths": [
+      3,
+      4,
+      5
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Low",
+    "potSizeMin": 18,
+    "companions": [
+      "Eggplant",
+      "Bell Pepper",
+      "Cabbage",
+      "Broccoli"
+    ],
+    "antagonists": [],
+    "description": "Tough aromatic perennial that draws pollinators (and cats); a strong companion deterrent.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Whitefly",
+        "type": "pest",
+        "remedy": "Rarely affected; acts as a trap and repellent plant."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Flea beetle",
+      "Squash bug",
+      "Ants"
+    ]
+  },
+  {
+    "id": "calendula",
+    "name": "Calendula",
+    "scientificName": "Calendula officinalis",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      9
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "watering": "Low",
+    "potSizeMin": 15,
+    "companions": [
+      "Tomato",
+      "Cucumber",
+      "Cabbage",
+      "Lettuce"
+    ],
+    "antagonists": [],
+    "description": "Edible-petalled pot marigold that lures aphids away from crops and feeds pollinators.",
+    "yieldKgPerPlant": 0.0,
+    "pricePerKg": 0.0,
+    "pests": [
+      {
+        "name": "Powdery mildew",
+        "type": "disease",
+        "remedy": "Space plants and water at the base."
+      }
+    ],
+    "deters": [
+      "Aphids",
+      "Whitefly",
+      "Nematodes",
+      "Asparagus beetle"
+    ]
+  },
+  {
+    "id": "pak-choi",
+    "name": "Pak Choi",
+    "scientificName": "Brassica rapa subsp. chinensis",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Easy",
+    "tempMin": 5,
+    "tempMax": 24,
+    "sowingMonths": [
+      3,
+      4,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      10,
+      11
+    ],
+    "watering": "High",
+    "potSizeMin": 18,
+    "companions": [
+      "Carrot",
+      "Beetroot",
+      "Chamomile",
+      "Dill"
+    ],
+    "antagonists": [
+      "Strawberry"
+    ],
+    "description": "Fast oriental brassica with crisp stems; bolts in heat, so grow in spring or autumn.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 5.5,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Cover with mesh and keep soil moist."
+      },
+      {
+        "name": "Cabbage white caterpillar",
+        "type": "pest",
+        "remedy": "Net plants and hand-pick eggs."
+      }
+    ]
+  },
+  {
+    "id": "mizuna",
+    "name": "Mizuna",
+    "scientificName": "Brassica rapa var. niposinica",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, North-East",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 24,
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      10,
+      11
+    ],
+    "watering": "Medium",
+    "potSizeMin": 15,
+    "companions": [
+      "Carrot",
+      "Beetroot",
+      "Pea"
+    ],
+    "antagonists": [
+      "Strawberry"
+    ],
+    "description": "Mild, feathery salad brassica for cut-and-come-again harvests; tolerates part shade.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 9.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Use mesh covers and harvest leaves young."
+      }
+    ]
+  },
+  {
+    "id": "mustard-greens",
+    "name": "Mustard Greens",
+    "scientificName": "Brassica juncea",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 26,
+    "sowingMonths": [
+      3,
+      4,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      10,
+      11
+    ],
+    "watering": "Medium",
+    "potSizeMin": 15,
+    "companions": [
+      "Pea",
+      "Bush Bean",
+      "Dill"
+    ],
+    "antagonists": [
+      "Strawberry"
+    ],
+    "description": "Peppery leafy greens that grow fast; pick young for salads or older for stir-fries.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 7.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Net seedlings and keep them well watered."
+      }
+    ],
+    "deters": [
+      "Nematodes"
+    ]
+  },
+  {
+    "id": "endive",
+    "name": "Endive",
+    "scientificName": "Cichorium endivia",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Medium",
+    "tempMin": 4,
+    "tempMax": 26,
+    "sowingMonths": [
+      6,
+      7,
+      8
+    ],
+    "harvestMonths": [
+      9,
+      10,
+      11
+    ],
+    "watering": "Medium",
+    "potSizeMin": 20,
+    "companions": [
+      "Carrot",
+      "Fennel",
+      "Cabbage"
+    ],
+    "antagonists": [],
+    "description": "Slightly bitter salad leaf; blanch the heart by covering for a sweeter, paler centre.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 6.5,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Rinse off colonies and encourage hoverflies."
+      },
+      {
+        "name": "Downy mildew",
+        "type": "disease",
+        "remedy": "Space plants and avoid wetting leaves."
+      }
+    ]
+  },
+  {
+    "id": "radicchio",
+    "name": "Radicchio",
+    "scientificName": "Cichorium intybus",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Medium",
+    "tempMin": 2,
+    "tempMax": 26,
+    "sowingMonths": [
+      6,
+      7
+    ],
+    "harvestMonths": [
+      10,
+      11,
+      12
+    ],
+    "watering": "Medium",
+    "potSizeMin": 20,
+    "companions": [
+      "Carrot",
+      "Fennel",
+      "Lettuce"
+    ],
+    "antagonists": [],
+    "description": "Crimson chicory that sweetens and colours up in cool autumn weather; frost-hardy.",
+    "yieldKgPerPlant": 0.35,
+    "pricePerKg": 8.0,
+    "pests": [
+      {
+        "name": "Slugs",
+        "type": "pest",
+        "remedy": "Use barriers and clear hiding spots near pots."
+      }
+    ]
+  },
+  {
+    "id": "watercress",
+    "name": "Watercress",
+    "scientificName": "Nasturtium officinale",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, North-East",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 24,
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      8,
+      9
+    ],
+    "harvestMonths": [
+      5,
+      6,
+      7,
+      9,
+      10
+    ],
+    "watering": "High",
+    "potSizeMin": 15,
+    "companions": [
+      "Mint",
+      "Chive"
+    ],
+    "antagonists": [],
+    "description": "Peppery leaf that craves constantly moist roots; grow pots standing in a tray of water.",
+    "yieldKgPerPlant": 0.2,
+    "pricePerKg": 12.0,
+    "pests": [
+      {
+        "name": "Aphids",
+        "type": "pest",
+        "remedy": "Rinse foliage with a strong spray of water."
+      }
+    ]
+  },
+  {
+    "id": "kohlrabi",
+    "name": "Kohlrabi",
+    "scientificName": "Brassica oleracea var. gongylodes",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 4,
+    "tempMax": 26,
+    "sowingMonths": [
+      3,
+      4,
+      5,
+      7,
+      8
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      9,
+      10
+    ],
+    "watering": "Medium",
+    "potSizeMin": 20,
+    "companions": [
+      "Beetroot",
+      "Onion",
+      "Chamomile",
+      "Dill"
+    ],
+    "antagonists": [
+      "Tomato",
+      "Strawberry"
+    ],
+    "description": "Swollen, crunchy stem with a mild turnip-cabbage flavour; quick and space-efficient.",
+    "yieldKgPerPlant": 0.3,
+    "pricePerKg": 4.5,
+    "pests": [
+      {
+        "name": "Cabbage root fly",
+        "type": "pest",
+        "remedy": "Fit collars at the base and rotate crops."
+      },
+      {
+        "name": "Clubroot",
+        "type": "disease",
+        "remedy": "Use fresh mix and keep the pH slightly alkaline."
+      }
+    ]
+  },
+  {
+    "id": "brussels-sprouts",
+    "name": "Brussels Sprouts",
+    "scientificName": "Brassica oleracea var. gemmifera",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Hard",
+    "tempMin": 2,
+    "tempMax": 24,
+    "sowingMonths": [
+      3,
+      4
+    ],
+    "harvestMonths": [
+      10,
+      11,
+      12,
+      1
+    ],
+    "watering": "High",
+    "potSizeMin": 35,
+    "companions": [
+      "Dill",
+      "Sage",
+      "Beetroot",
+      "Onion"
+    ],
+    "antagonists": [
+      "Strawberry",
+      "Tomato"
+    ],
+    "description": "Tall, slow brassica needing firm soil and a long season; sweeter after the first frost.",
+    "yieldKgPerPlant": 0.6,
+    "pricePerKg": 5.0,
+    "pests": [
+      {
+        "name": "Cabbage white caterpillar",
+        "type": "pest",
+        "remedy": "Net plants and remove eggs weekly."
+      },
+      {
+        "name": "Whitefly",
+        "type": "pest",
+        "remedy": "Use sticky traps and a forceful water spray."
+      }
+    ]
+  },
+  {
+    "id": "horseradish",
+    "name": "Horseradish",
+    "scientificName": "Armoracia rusticana",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Easy",
+    "tempMin": 2,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4
+    ],
+    "harvestMonths": [
+      10,
+      11
+    ],
+    "watering": "Medium",
+    "potSizeMin": 30,
+    "companions": [
+      "Potato"
+    ],
+    "antagonists": [],
+    "description": "Pungent root that is best grown confined to a deep pot to stop it spreading.",
+    "yieldKgPerPlant": 0.5,
+    "pricePerKg": 10.0,
+    "pests": [
+      {
+        "name": "Flea beetle",
+        "type": "pest",
+        "remedy": "Tough plant; rinse beetles off the foliage."
+      }
+    ],
+    "deters": [
+      "Potato beetle",
+      "Aphids"
+    ]
+  },
+  {
+    "id": "raspberry",
+    "name": "Raspberry",
+    "scientificName": "Rubus idaeus",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Medium",
+    "tempMin": -5,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4,
+      10,
+      11
+    ],
+    "harvestMonths": [
+      6,
+      7,
+      8,
+      9
+    ],
+    "watering": "Medium",
+    "potSizeMin": 35,
+    "companions": [
+      "Garlic",
+      "Marigold",
+      "Chive"
+    ],
+    "antagonists": [
+      "Potato",
+      "Tomato",
+      "Eggplant"
+    ],
+    "description": "Cane fruit that crops well in large pots; choose autumn-fruiting types for easy pruning.",
+    "yieldKgPerPlant": 1.0,
+    "pricePerKg": 15.0,
+    "pests": [
+      {
+        "name": "Raspberry beetle",
+        "type": "pest",
+        "remedy": "Use traps and pick fruit promptly when ripe."
+      },
+      {
+        "name": "Cane spot",
+        "type": "disease",
+        "remedy": "Cut out and bin affected canes after fruiting."
+      }
+    ]
+  },
+  {
+    "id": "blueberry",
+    "name": "Blueberry",
+    "scientificName": "Vaccinium corymbosum",
+    "sunlightHoursMin": 5,
+    "exposurePreference": "South, South-East, West",
+    "difficulty": "Medium",
+    "tempMin": -10,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4,
+      10,
+      11
+    ],
+    "harvestMonths": [
+      7,
+      8,
+      9
+    ],
+    "watering": "High",
+    "potSizeMin": 35,
+    "companions": [
+      "Thyme",
+      "Strawberry"
+    ],
+    "antagonists": [],
+    "description": "Acid-loving shrub that must be grown in ericaceous mix and watered with rainwater.",
+    "yieldKgPerPlant": 1.5,
+    "pricePerKg": 14.0,
+    "pests": [
+      {
+        "name": "Birds",
+        "type": "pest",
+        "remedy": "Net the bush as the berries start to colour."
+      },
+      {
+        "name": "Chlorosis",
+        "type": "disease",
+        "remedy": "Use ericaceous feed; yellowing means pH too high."
+      }
+    ]
+  },
+  {
+    "id": "rhubarb",
+    "name": "Rhubarb",
+    "scientificName": "Rheum rhabarbarum",
+    "sunlightHoursMin": 4,
+    "exposurePreference": "East, West, South-East",
+    "difficulty": "Easy",
+    "tempMin": -10,
+    "tempMax": 28,
+    "sowingMonths": [
+      3,
+      4,
+      10,
+      11
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "watering": "Medium",
+    "potSizeMin": 40,
+    "companions": [
+      "Garlic",
+      "Onion",
+      "Cabbage"
+    ],
+    "antagonists": [],
+    "description": "Hardy perennial grown for its tart stalks; the leaves are poisonous and must not be eaten.",
+    "yieldKgPerPlant": 1.0,
+    "pricePerKg": 6.0,
+    "pests": [
+      {
+        "name": "Crown rot",
+        "type": "disease",
+        "remedy": "Plant the crown proud of the surface and ensure drainage."
+      }
+    ],
+    "deters": [
+      "Whitefly"
+    ]
+  },
+  {
+    "id": "asparagus",
+    "name": "Asparagus",
+    "scientificName": "Asparagus officinalis",
+    "sunlightHoursMin": 6,
+    "exposurePreference": "South, East, West",
+    "difficulty": "Hard",
+    "tempMin": -15,
+    "tempMax": 30,
+    "sowingMonths": [
+      3,
+      4
+    ],
+    "harvestMonths": [
+      4,
+      5,
+      6
+    ],
+    "watering": "Medium",
+    "potSizeMin": 40,
+    "companions": [
+      "Tomato",
+      "Parsley",
+      "Basil",
+      "Marigold"
+    ],
+    "antagonists": [
+      "Garlic",
+      "Onion"
+    ],
+    "description": "Long-lived perennial; needs a deep container and a few patient years before first cropping.",
+    "yieldKgPerPlant": 0.4,
+    "pricePerKg": 12.0,
+    "pests": [
+      {
+        "name": "Asparagus beetle",
+        "type": "pest",
+        "remedy": "Hand-pick beetles and larvae from the ferns."
+      },
+      {
+        "name": "Rust",
+        "type": "disease",
+        "remedy": "Choose resistant varieties and improve airflow."
+      }
+    ]
   }
 ]

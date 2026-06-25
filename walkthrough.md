@@ -24,7 +24,7 @@ vibe_coding_milestone/
 │   └── README.md
 ├── mcp-botanical-server/          # Botanical MCP server (Python / FastMCP)
 │   ├── server.py
-│   ├── db.json                    # Urban plant database (50 varieties)
+│   ├── db.json                    # Urban plant database (78 varieties)
 │   ├── pyproject.toml
 │   └── README.md
 ├── backend/                       # Multi-agent orchestrator (Google ADK + FastAPI)
