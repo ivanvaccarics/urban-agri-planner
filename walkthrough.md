@@ -161,6 +161,12 @@ The assembled plan and the API around it add several production-minded touches:
 `security` block (`humanApproved`, `adjusted`, `checkpointSkipped`, `mechanism`,
 `proposedPlantIds`, `finalPlantIds`).
 
+**`POST /api/plan/chat`** — body: `{ sessionId, message }`. Available only after a plan is
+finalised. A dedicated `AdvisorAgent` (its own ADK `Runner`, with the botanical MCP toolset)
+answers follow-up questions grounded in the finalised plan. The plan context is seeded into the
+first chat turn; the advisor keeps a per-session ADK chat session so the conversation has memory.
+Response: `{ sessionId, reply, steps }` where `steps` lists any botanical tools used to re-validate.
+
 The frontend (`frontend/src/App.jsx`) implements exactly this flow: it generates the plan,
 shows the **security checkpoint** with the proposed crops (editable), and only after approval
 renders the dashboard with the HITL outcome banner.

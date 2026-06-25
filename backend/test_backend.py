@@ -80,6 +80,16 @@ class ScriptedModel(BaseLlm):
 
     @staticmethod
     def _decide(tools: set[str], done: set[str]) -> types.Content:
+        # AdvisorAgent (follow-up chat): has get_crop_details but no finalize tool.
+        # Re-validate one crop via a tool, then answer in text.
+        if "get_crop_details" in tools and "finalize_plant_selection" not in tools:
+            if "get_crop_details" not in done:
+                return _fc("get_crop_details", plantId="lettuce")
+            return _txt(
+                "Lettuce is a good shade-tolerant swap and pairs well with your "
+                "tomatoes. Go ahead and try it."
+            )
+
         # GeoClimateAgent: geocode, then fetch climate, then summarise.
         if "get_coordinates" in tools:
             if "get_coordinates" not in done:
@@ -118,6 +128,7 @@ def _install_scripted_model() -> None:
     model = ScriptedModel()
     agents.GeoClimateAgent.model = model
     agents.PlannerAgent.model = model
+    agents.AdvisorAgent.model = model
 
 
 # --------------------------------------------------------------------------- #
@@ -307,6 +318,50 @@ def test_plan_then_reject(client) -> None:
     _check("selectedPlants" not in data, "rejected plan must not contain selectedPlants")
 
 
+def test_plan_then_chat(client) -> None:
+    """After a plan is approved, the follow-up advisor answers a question."""
+    plan = _start_plan(client)
+    confirm = client.post(
+        "/api/plan/confirm",
+        json={
+            "sessionId": plan["sessionId"],
+            "functionCallId": plan["functionCallId"],
+            "approved": True,
+            "plantIds": plan["proposedPlantIds"],
+        },
+    )
+    _check(confirm.status_code == 200, f"confirm status {confirm.status_code}")
+
+    resp = client.post(
+        "/api/plan/chat",
+        json={"sessionId": plan["sessionId"], "message": "Can I swap basil for lettuce?"},
+    )
+    _check(resp.status_code == 200, f"chat status {resp.status_code}: {resp.text}")
+    data = resp.json()
+    _check(bool(data.get("reply")), "advisor reply should not be empty")
+    _check(
+        any(s.get("type") == "tool_call" for s in data.get("steps", [])),
+        "advisor should re-validate using a botanical tool",
+    )
+
+    # A follow-up turn keeps working (session memory).
+    resp2 = client.post(
+        "/api/plan/chat",
+        json={"sessionId": plan["sessionId"], "message": "And what about watering?"},
+    )
+    _check(resp2.status_code == 200, f"chat follow-up status {resp2.status_code}")
+    _check(bool(resp2.json().get("reply")), "follow-up reply should not be empty")
+
+
+def test_chat_without_plan_404(client) -> None:
+    """Chat before any finalised plan returns 404."""
+    resp = client.post(
+        "/api/plan/chat",
+        json={"sessionId": "does-not-exist", "message": "hello"},
+    )
+    _check(resp.status_code == 404, f"expected 404, got {resp.status_code}")
+
+
 # --------------------------------------------------------------------------- #
 # Standalone runner.
 # --------------------------------------------------------------------------- #
@@ -322,6 +377,8 @@ def main() -> int:
         test_plan_with_season_and_greenhouse,
         test_plan_then_adjust,
         test_plan_then_reject,
+        test_plan_then_chat,
+        test_chat_without_plan_404,
     ]
     passed = 0
     failed = 0

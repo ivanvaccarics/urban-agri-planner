@@ -37,6 +37,8 @@ from google.genai import types
 
 import agents
 from agents import (
+    advisor_agent,
+    build_chat_message,
     build_initial_message,
     build_planting_schedule,
     compute_companionship,
@@ -51,6 +53,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("backend-orchestrator")
 
 APP_NAME = "urban-agri-planner"
+ADVISOR_APP_NAME = "urban-agri-planner-advisor"
 USER_ID = "local-user"
 CONFIRMATION_FC_NAME = "adk_request_confirmation"
 
@@ -138,6 +141,11 @@ class ConfirmRequest(BaseModel):
     plantIds: Optional[list[str]] = None
 
 
+class ChatRequest(BaseModel):
+    sessionId: str
+    message: str = Field(min_length=1, max_length=1000)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.session_service = InMemorySessionService()
@@ -151,6 +159,12 @@ async def lifespan(app: FastAPI):
     )
     app.state.runner = Runner(
         app=adk_app,
+        session_service=app.state.session_service,
+    )
+    # Separate runner for the post-plan follow-up advisor (no HITL, non-resumable).
+    advisor_app = App(name=ADVISOR_APP_NAME, root_agent=advisor_agent)
+    app.state.advisor_runner = Runner(
+        app=advisor_app,
         session_service=app.state.session_service,
     )
     # Per-session capture store: session_id -> captured data, bounded by TTL/size.
@@ -674,6 +688,77 @@ async def confirm_plan(request: ConfirmRequest) -> dict[str, Any]:
     )
 
 
+async def _run_advisor(chat_session_id: str, text: str) -> dict[str, Any]:
+    """Drive the advisor runner for one chat turn and collect its reply + steps."""
+    message = types.Content(role="user", parts=[types.Part(text=text)])
+    reply_parts: list[str] = []
+    steps: list[dict[str, Any]] = []
+    try:
+        async for event in app.state.advisor_runner.run_async(
+            user_id=USER_ID, session_id=chat_session_id, new_message=message
+        ):
+            for part in (event.content.parts if event.content else []) or []:
+                if getattr(part, "function_call", None) is not None:
+                    steps.append({"type": "tool_call", "tool": part.function_call.name})
+                if getattr(part, "text", None):
+                    reply_parts.append(part.text)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Advisor run failed:")
+        detail = str(exc)
+        if "API key" in detail or "GOOGLE_API_KEY" in detail or "PERMISSION" in detail:
+            detail = (
+                "Gemini model call failed. Check that GOOGLE_API_KEY is set in "
+                f"backend/.env. Details: {detail}"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error while running the advisor: {detail}",
+        )
+    return {"reply": "\n\n".join(reply_parts).strip(), "steps": steps}
+
+
+@app.post("/api/plan/chat")
+async def plan_chat(request: ChatRequest) -> dict[str, Any]:
+    """Answer a follow-up question about a finalised plan (conversational advisor).
+
+    Requires that ``/api/plan/confirm`` has already produced a completed plan for
+    the session. The advisor keeps its own ADK chat session (per planning
+    session) so the conversation has memory; the plan context is seeded into the
+    first turn only.
+    """
+    captured = app.state.sessions.get(request.sessionId)
+    if captured is None or not captured.get("completed_plan"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                "No finalised plan for this session. Generate and confirm a plan "
+                "before asking follow-up questions."
+            ),
+        )
+
+    plan = captured["completed_plan"]
+    request_data = captured.get("request", {}) or {}
+    chat_session_id = f"{request.sessionId}::chat"
+
+    existing = await app.state.session_service.get_session(
+        app_name=ADVISOR_APP_NAME, user_id=USER_ID, session_id=chat_session_id
+    )
+    first_turn = existing is None
+    if first_turn:
+        await app.state.session_service.create_session(
+            app_name=ADVISOR_APP_NAME, user_id=USER_ID, session_id=chat_session_id
+        )
+
+    text = build_chat_message(plan, request_data, request.message, first_turn)
+    result = await _run_advisor(chat_session_id, text)
+    return {
+        "sessionId": request.sessionId,
+        "reply": result["reply"]
+        or "Sorry, I couldn't produce an answer. Please try rephrasing.",
+        "steps": result["steps"],
+    }
+
+
 async def _assemble_completed(
     *,
     session_id: str,
@@ -725,7 +810,7 @@ async def _assemble_completed(
         coordinates.get("latitude"), coordinates.get("longitude")
     )
 
-    return {
+    result = {
         "status": "completed",
         "sessionId": session_id,
         "location": climate["location"],
@@ -756,6 +841,10 @@ async def _assemble_completed(
             "mechanism": "ADK FunctionTool require_confirmation (human-in-the-loop)",
         },
     }
+    # Persist the finalised plan so the follow-up advisor (/api/plan/chat) can
+    # ground its answers in it. captured is held by reference in the store.
+    captured["completed_plan"] = result
+    return result
 
 
 if __name__ == "__main__":

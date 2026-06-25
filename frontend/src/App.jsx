@@ -473,6 +473,9 @@ function App() {
   const [planResult, setPlanResult] = useState(null);                   // completed plan
   const [rejection, setRejection] = useState(null);                     // rejected payload
   const [companionView, setCompanionView] = useState("list");           // "list" | "graph"
+  const [chatMessages, setChatMessages] = useState([]);                 // {role, text}
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Animate the real agent steps into the activity log for an agentic feel.
   const animateSteps = async (steps) => {
@@ -490,6 +493,39 @@ function App() {
     setRejection(null);
     setDisplayedSteps([]);
     setError(null);
+    setChatMessages([]);
+    setChatInput("");
+  };
+
+  // Send a follow-up question about the finalised plan to the advisor agent.
+  const sendChatMessage = async () => {
+    const question = chatInput.trim();
+    if (!question || chatLoading || !planResult?.sessionId) return;
+    setChatMessages((prev) => [...prev, { role: "user", text: question }]);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/plan/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: planResult.sessionId, message: question }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "The advisor could not answer.");
+      }
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "advisor", text: data.reply, steps: data.steps || [] },
+      ]);
+    } catch (err) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "advisor", text: `⚠️ ${err.message}`, error: true },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   // Debounced address autocomplete. Queries the backend suggestions proxy
@@ -1375,6 +1411,79 @@ function App() {
             </div>
           </div>
 
+          </div>
+
+          {/* Follow-up advisor chat */}
+          <div className="glass-card chat-card">
+            <h2 className="card-title">
+              <span className="material-symbols">forum</span> Ask the Garden Advisor
+            </h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
+              Ask follow-up questions about your plan — substitutions, companions,
+              watering, timing. Answers are re-validated against your climate and crops.
+            </p>
+
+            <div className="chat-window">
+              {chatMessages.length === 0 && (
+                <div className="chat-empty">
+                  Try: <em>“Can I swap basil for mint?”</em> or
+                  {" "}<em>“Which crop needs the least water?”</em>
+                </div>
+              )}
+              {chatMessages.map((msg, idx) => (
+                <div key={idx} className={`chat-bubble ${msg.role}${msg.error ? " error" : ""}`}>
+                  {msg.role === "advisor" && (
+                    <span className="material-symbols chat-avatar">eco</span>
+                  )}
+                  <div className="chat-text">
+                    {msg.text}
+                    {msg.steps && msg.steps.length > 0 && (
+                      <div className="chat-tools">
+                        {msg.steps
+                          .filter((s) => s.type === "tool_call")
+                          .map((s, j) => (
+                            <span key={j} className="chat-tool-chip">
+                              <span className="material-symbols" style={{ fontSize: "13px", verticalAlign: "-2px" }}>build</span>
+                              &nbsp;{s.tool}
+                            </span>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="chat-bubble advisor">
+                  <span className="material-symbols chat-avatar">eco</span>
+                  <div className="chat-text chat-typing">Thinking…</div>
+                </div>
+              )}
+            </div>
+
+            <form
+              className="chat-input-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendChatMessage();
+              }}
+            >
+              <input
+                type="text"
+                className="chat-input"
+                placeholder="Ask about your cultivation plan…"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={chatLoading}
+                maxLength={1000}
+              />
+              <button
+                type="submit"
+                className="btn-chat-send"
+                disabled={chatLoading || !chatInput.trim()}
+              >
+                <span className="material-symbols">send</span>
+              </button>
+            </form>
           </div>
         </>
       )}

@@ -251,6 +251,121 @@ root_agent = SequentialAgent(
 )
 
 
+# --------------------------------------------------------------------------- #
+# Follow-up advisor agent (post-plan conversational Q&A).
+# A dedicated botanical toolset keeps its stdio connection independent from the
+# planning pipeline's, so chat turns never contend with a plan run.
+# --------------------------------------------------------------------------- #
+advisor_botanical_toolset = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command=sys.executable,
+            args=[BOTANICAL_SERVER_PATH],
+        ),
+        timeout=30.0,
+    ),
+    tool_filter=BOTANICAL_TOOLS,
+)
+
+AdvisorAgent = LlmAgent(
+    name="AdvisorAgent",
+    model=MODEL,
+    description="Answers follow-up questions about a finalised cultivation plan.",
+    instruction=(
+        "You are the **Garden Advisor** of an urban-gardening planning system.\n"
+        "The user has already received a finalised cultivation plan. The FIRST "
+        "message in this conversation contains that plan's context: the location, "
+        "estimated USDA hardiness zone, target season, sunlight hours, exposure, "
+        "the selected crops, and the other crops that are compatible with the "
+        "user's light conditions.\n\n"
+        "Answer the user's follow-up questions about their plan — substitutions, "
+        "companion planting, watering, timing, pests, and general care.\n\n"
+        "Rules:\n"
+        "- Before making any factual claim about a specific plant, VERIFY it with "
+        "the tools: use `get_crop_details` for a plant's needs, "
+        "`get_compatible_plants` to confirm what suits the user's light, and "
+        "`check_companion_planting` to test how plants get along.\n"
+        "- If the user proposes swapping or adding a crop, check that it appears "
+        "in the compatible list (light fit) and that it pairs well with the "
+        "current selection, then give a clear recommendation.\n"
+        "- Never invent plant data or climate figures. If something is outside the "
+        "plan's data, say so plainly.\n"
+        "- Reply concisely (2-5 sentences) in the SAME language the user writes in."
+    ),
+    tools=[advisor_botanical_toolset],
+    generate_content_config=_DETERMINISTIC_CONFIG,
+)
+
+advisor_agent = AdvisorAgent
+
+
+def build_advisor_context(
+    plan: dict[str, Any], request_data: dict[str, Any] | None = None
+) -> str:
+    """Render the finalised plan into a compact context block for the advisor.
+
+    Seeded as the first user message of a chat session so the model can answer
+    follow-up questions grounded in the actual plan, without re-running the
+    planning pipeline.
+
+    Args:
+        plan: The completed plan response dict (see :func:`_assemble_completed`).
+        request_data: The original plan request (for sunlight/exposure).
+
+    Returns:
+        A plain-text context block.
+    """
+    request_data = request_data or {}
+    selected = ", ".join(p["name"] for p in plan.get("selectedPlants", [])) or "none"
+    compatible = ", ".join(
+        p["name"] for p in plan.get("compatiblePlants", [])
+    ) or "none"
+    comp = plan.get("companionship", {}) or {}
+    good = "; ".join(
+        " + ".join(c.get("plants", [])) for c in comp.get("companions", [])
+    ) or "none noted"
+
+    lines = [
+        "CONTEXT — the user's finalised cultivation plan:",
+        f"- Location: {plan.get('location') or 'unknown'}",
+        f"- USDA hardiness zone: {plan.get('estimatedHardinessZone') or 'unknown'}",
+        f"- Target season: {plan.get('season') or 'not specified'}",
+        f"- Setup: {'greenhouse' if plan.get('greenhouse') else 'outdoor'}",
+        f"- Available sunlight: {request_data.get('sunlightHours', 'unknown')} h/day",
+        f"- Exposure: {request_data.get('exposure', 'unknown')}",
+        f"- Selected crops: {selected}",
+        f"- Other crops compatible with this light: {compatible}",
+        f"- Good companion pairs in the plan: {good}",
+        "",
+        "Use this context plus the botanical tools to answer the questions that "
+        "follow. The next message is the user's first question.",
+    ]
+    return "\n".join(lines)
+
+
+def build_chat_message(
+    plan: dict[str, Any],
+    request_data: dict[str, Any] | None,
+    user_message: str,
+    include_context: bool,
+) -> str:
+    """Compose a chat turn, prefixing plan context only on the first turn.
+
+    Args:
+        plan: The completed plan response dict.
+        request_data: The original plan request.
+        user_message: The user's question.
+        include_context: Whether to prepend the plan context (first turn only).
+
+    Returns:
+        The text to send to the advisor agent for this turn.
+    """
+    if include_context:
+        context = build_advisor_context(plan, request_data)
+        return f"{context}\n\nUSER QUESTION: {user_message}"
+    return user_message
+
+
 def build_initial_message(
     address: str,
     sunlight_hours: float,
