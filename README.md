@@ -72,6 +72,8 @@ The model powering every `LlmAgent` instance is **`gemma-4-26b-a4b-it`**. The
 
 No plan is ever finalised without explicit human approval. Seasons are flipped
 automatically for Southern-Hemisphere locations based on the geocoded latitude.
+User-facing text is localized end-to-end (English / Italian) via a `lang` field on
+the API requests, with both UI and backend-generated prose translated.
 
 ---
 

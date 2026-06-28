@@ -130,6 +130,10 @@ The assembled plan and the API around it add several production-minded touches:
   or Print / Save as PDF.
 * **Companion-planting graph** — the companion/antagonist relationships render either as a
   list or as an interactive SVG network graph.
+* **Multilingual output (en/it)** — user-facing text is localized end-to-end: the frontend
+  UI via `frontend/src/lib/i18n.jsx`, and backend-generated prose via `backend/i18n.py`
+  (a `lang` directive is appended to LLM prompts; templated calendar/watering/pest text is
+  translated). Plant data from `db.json` is returned in its source language.
 
 **Security & scalability hardening (backend):**
 
@@ -154,7 +158,8 @@ The assembled plan and the API around it add several production-minded touches:
 | `POST /api/plan` | Runs the pipeline up to the HITL checkpoint | `confirmation_required` (or `completed` if no crop matches) |
 | `POST /api/plan/confirm` | Resumes the session with the human decision | `completed` or `rejected` |
 
-**`POST /api/plan`** — body: `{ address, sunlightHours, exposure, season?, greenhouse? }`.
+**`POST /api/plan`** — body: `{ address, sunlightHours, exposure, season?, greenhouse?, lang? }`
+(`lang` is `en` or `it`, default `en`).
 `confirmation_required` response: `sessionId`, `functionCallId`, `proposedPlantIds`,
 `proposedPlants`, `rationale`, `review`, `compatiblePlants`, `location`, `coordinates`,
 `estimatedHardinessZone`, `absoluteMinTempYear`, `frostDates`, `climateYears`,
@@ -170,7 +175,7 @@ returns `null` and never blocks the checkpoint.
 `security` block (`humanApproved`, `adjusted`, `checkpointSkipped`, `mechanism`,
 `proposedPlantIds`, `finalPlantIds`).
 
-**`POST /api/plan/chat`** — body: `{ sessionId, message }`. Available only after a plan is
+**`POST /api/plan/chat`** — body: `{ sessionId, message, lang? }`. Available only after a plan is
 finalised. A dedicated `AdvisorAgent` (its own ADK `Runner`, with the botanical MCP toolset)
 answers follow-up questions grounded in the finalised plan. The plan context is seeded into the
 first chat turn; the advisor keeps a per-session ADK chat session so the conversation has memory.
