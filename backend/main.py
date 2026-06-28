@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 from collections import OrderedDict
 from typing import Any, Optional
@@ -768,6 +769,22 @@ async def confirm_plan(request: ConfirmRequest) -> dict[str, Any]:
     )
 
 
+# Reasoning markers emitted inline by thinking-style models. We strip these
+# blocks so only the advisor's final answer reaches the user.
+_REASONING_BLOCK_RE = re.compile(
+    r"(?is)[◁<]\s*/?\s*think(?:ing)?\s*[▷>].*?(?:[◁<]\s*/\s*think(?:ing)?\s*[▷>]|\Z)"
+)
+_REASONING_DELIM_RE = re.compile(r"(?i)[◁<]\s*/?\s*think(?:ing)?\s*[▷>]")
+
+
+def _strip_reasoning(text: str) -> str:
+    """Remove inline model reasoning blocks, leaving only the final answer."""
+    cleaned = _REASONING_BLOCK_RE.sub("", text)
+    # Drop any orphan reasoning delimiters left behind by partial markers.
+    cleaned = _REASONING_DELIM_RE.sub("", cleaned)
+    return cleaned.strip()
+
+
 async def _run_advisor(chat_session_id: str, text: str) -> dict[str, Any]:
     """Drive the advisor runner for one chat turn and collect its reply + steps."""
     message = types.Content(role="user", parts=[types.Part(text=text)])
@@ -780,6 +797,10 @@ async def _run_advisor(chat_session_id: str, text: str) -> dict[str, Any]:
             for part in (event.content.parts if event.content else []) or []:
                 if getattr(part, "function_call", None) is not None:
                     steps.append({"type": "tool_call", "tool": part.function_call.name})
+                # Skip the model's internal reasoning ("thought") parts so only
+                # the final answer is surfaced to the user.
+                if getattr(part, "thought", False):
+                    continue
                 if getattr(part, "text", None):
                     reply_parts.append(part.text)
     except Exception as exc:  # noqa: BLE001
@@ -794,7 +815,7 @@ async def _run_advisor(chat_session_id: str, text: str) -> dict[str, Any]:
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error while running the advisor: {detail}",
         )
-    return {"reply": "\n\n".join(reply_parts).strip(), "steps": steps}
+    return {"reply": _strip_reasoning("\n\n".join(reply_parts)), "steps": steps}
 
 
 @app.post("/api/plan/chat")
